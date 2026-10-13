@@ -1,0 +1,13 @@
+# Programme workbooks can hold real personal data (hidden sample sheets). Never commit them.
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+!skills/*/examples/synthetic-*.xlsx
+
+# Generated output and caches
+spec.json
+schema-output/
+__pycache__/
+*.pyc
+.DS_Store

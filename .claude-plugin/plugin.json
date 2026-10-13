@@ -1,0 +1,15 @@
+{
+  "name": "bluedots-schema-tools",
+  "description": "Turn a Blue Dots schema workbook (Excel) into network.json and the aggregator registration form schemas.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Abhishek Gaddi"
+  },
+  "repository": "https://github.com/AbhiGaddi/bluedots-claude-plugins",
+  "keywords": [
+    "blue-dots",
+    "schema",
+    "network.json",
+    "excel"
+  ]
+}

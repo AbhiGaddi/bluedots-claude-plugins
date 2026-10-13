@@ -1,0 +1,14 @@
+{
+  "name": "bluedots-claude-plugins",
+  "owner": {
+    "name": "Abhishek Gaddi"
+  },
+  "description": "Claude Code plugins for Blue Dots integrators.",
+  "plugins": [
+    {
+      "name": "bluedots-schema-tools",
+      "source": ".",
+      "description": "Turn a Blue Dots schema workbook (Excel) into network.json and the aggregator registration form schemas."
+    }
+  ]
+}
