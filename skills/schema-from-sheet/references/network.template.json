@@ -1,0 +1,177 @@
+{
+  "_comment": "Defaults for everything a schema workbook doesn't define. Taken from a deployed Blue Dots network (purple_dot/alimco). Generated files copy these, then apply decisions.json.",
+  "schema_standard": "https://json-schema.org/draft/2020-12/schema",
+  "item_type": "profile_1.0",
+  "item_schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false
+  },
+  "domain_defaults": {
+    "minimum_cache_ttl_seconds": 300,
+    "go_live_required": [
+      "schema_required",
+      "consent_required"
+    ],
+    "my_items_label": "My Actions",
+    "status_rules": [
+      {
+        "status": "new",
+        "label": "New",
+        "description": "Joined within the last 7 days",
+        "when": {
+          "item_age_days": {
+            "lte": 7
+          }
+        }
+      },
+      {
+        "status": "active",
+        "label": "Active",
+        "description": "Connected with a provider in the last 30 days",
+        "when": {
+          "days_since_last": {
+            "buckets": [
+              "create",
+              "accept"
+            ],
+            "lte": 30
+          }
+        }
+      },
+      {
+        "status": "at_risk",
+        "label": "At Risk",
+        "description": "No activity for 30–90 days",
+        "when": {
+          "days_since_last": {
+            "buckets": [
+              "create",
+              "accept",
+              "reject"
+            ],
+            "between": [
+              31,
+              90
+            ]
+          }
+        }
+      },
+      {
+        "status": "inactive",
+        "label": "Inactive",
+        "description": "No activity 90+ days",
+        "when": "default"
+      }
+    ],
+    "profile_completion_prompt": {
+      "heading": "Complete your profile to get discovered",
+      "body": "Others can find and connect with you only once your profile is live. Fill in the details below to get started."
+    },
+    "dashboard_tiles": {
+      "profile": [
+        {
+          "field": "total_items",
+          "label": "Profiles Registered"
+        },
+        {
+          "field": "complete_profiles",
+          "label": "Profiles Complete"
+        },
+        {
+          "field": "has_applications",
+          "label": "Made Connections"
+        }
+      ],
+      "user": [
+        {
+          "field": "total_users",
+          "label": "Total Seekers"
+        },
+        {
+          "field": "avg_items_per_user",
+          "label": "Avg Profiles per User"
+        },
+        {
+          "field": "avg_actions_per_user",
+          "label": "Avg Actions per User"
+        }
+      ]
+    }
+  },
+  "interaction_defaults": {
+    "requirement_schema": {
+      "type": "object",
+      "properties": {}
+    },
+    "event_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "{From} To {To} {Action} Event",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "remark"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "created",
+            "accepted",
+            "completed",
+            "rejected",
+            "cancelled"
+          ]
+        },
+        "remark": {
+          "type": "string"
+        }
+      }
+    },
+    "metric_categories": {
+      "create": [
+        "created"
+      ],
+      "accept": [
+        "accepted"
+      ],
+      "reject": [
+        "rejected"
+      ],
+      "cancel": [
+        "cancelled"
+      ]
+    },
+    "reveals_pii_on_status": [
+      "accepted",
+      "completed"
+    ]
+  },
+  "action_description": "Lets participants request a connection with each other. Either party can initiate; the receiver can accept or reject, and the initiator can cancel before the receiver responds.",
+  "dashboard_buckets": {
+    "by_status": {
+      "new": "New",
+      "active": "Active",
+      "at_risk": "At Risk",
+      "inactive": "Inactive"
+    },
+    "by_initiated_action_status": {
+      "create": "Requested",
+      "accept": "Accepted",
+      "reject": "Declined",
+      "cancel": "Cancelled"
+    },
+    "by_received_action_status": {
+      "create": "Requests",
+      "accept": "Connected",
+      "reject": "Declined",
+      "cancel": "Cancelled"
+    }
+  },
+  "instance": {
+    "instance_name": "{Network} {Domain} Local",
+    "instance_url": "http://localhost:2742",
+    "custom_item_schema_urls": {}
+  }
+}

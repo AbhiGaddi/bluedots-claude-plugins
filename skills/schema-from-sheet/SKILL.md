@@ -1,119 +1,96 @@
 ---
 name: schema-from-sheet
-description: Turn a Blue Dots schema workbook (Excel) into a network.json and the aggregator registration form schemas. Use when the user gives a schema .xlsx (profile sheets per domain, aggregator owner/coordinator sheets, interaction rules) and wants the Blue Dots / Signals schema files created, or wants to compare the workbook with a network.json they already have.
+description: Turn a Blue Dots schema workbook (Excel) into a network.json and the aggregator registration form schemas. Use when the user gives a schema .xlsx (profile sheets per domain, aggregator owner/coordinator sheets, interaction rules) and wants the Blue Dots / Signals schema files created or updated, or wants to compare the workbook with a network.json they already have.
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/*.py *)
 compatibility: Requires Python 3.9 or newer (tested on 3.9 and 3.14) and the openpyxl package (3.1+), installed automatically if missing.
 ---
 
 # Schema from sheet
 
-Converts a programme's schema workbook into the files a Blue Dots (Signals) deployment reads:
+Turns a programme's schema workbook into the files a Blue Dots (Signals) deployment reads:
 
 - `network.json`: domains, item schemas (fields), interactions
-- aggregator registration forms: `org-registration.v1.json` + `org-registration.v1.ui.json` (organisation / owner) and `registration.v1.json` + `registration.v1.ui.json` (coordinator)
+- aggregator registration forms: `org-registration.v1.json` + `.ui.json` (organisation / owner) and `registration.v1.json` + `.ui.json` (coordinator)
 
-Workbooks are written by people: rows carry review notes ("Needs Review: …"), options sometimes sit in one comma- or slash-separated cell, and conditional sub-fields appear as rows with a blank field name. The scripts extract and check; you apply the defaults and rules below and **record every judgement call in `decisions.md`** rather than asking.
+**The files are written by scripts, never by hand.** `build.py` combines the workbook (`.spec.json`), the human choices (`decisions.json`) and the reference templates in `references/` (structure taken from a deployed network), so the output always has the structure Signals and the aggregator portal read, and the same inputs always give the same files. Your job is to fill in `decisions.json`, not to write JSON schemas.
 
-Scripts live in `${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/`.
+Scripts: `${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/` (written `$S` below).
 
 ## Don't ask: decide and report
 
-Integrators should get files, not a questionnaire. Do **not** ask questions before or during generation. Apply the defaults below, record every assumption in `<output>/decisions.md`, and finish with a short list of the assumptions the user may want to change. Only stop to ask if the workbook can't be read at all.
-
-| Needed | Default (no question) |
-|---|---|
-| Mode | **Create**. If a `network.json` for the **same network** already exists (the user mentions one, or the workbook is a later version of a deployed schema), it's an update: run compare first, then **reuse its keys, domain ids, titles and domain settings** and change only what the sheet changes. New keys would orphan every stored profile. Compare-only when the user just wants the differences |
-| Network id / display name | From the user's request if given; else from the workbook name (e.g. `Blue Dots Schema …` → `blue_dot`, "Blue Dot") |
-| Domain per profile sheet | Existing network's domain ids first (e.g. a Service Provider sheet → `provider` if that's what the network uses). Otherwise `*Seeker*` → `seeker`, `*JobProvider*` → `provider`, `*ServiceProvider*` → `service_provider`, else snake_case of the sheet name |
-| Instance API URL | `http://localhost:2742` (local), noted in decisions |
-| Output folder | `./schema-output/<network>/` |
-| Field keys | Existing key when the field already exists (matched by title, description or key). New fields: follow the existing network's key style (snake_case or camelCase); for a brand-new network, camelCase of the short title |
-| "Needs Review" rows | Resolve with the fixed rules (PII wins; no vectorize on numbers, amounts, counts or locations; upload skipped). Otherwise keep the sheet's own values. Note each one in decisions |
-| Options in one cell | Already split by the extractor on `/` or `,`; noted in decisions |
-| Non-literal options ("State-specific trade list", "Dropdown of … colleges", notes) | Free-text field (`"type": "string"`), or `x-reference-source` for a college/institution search; noted in decisions |
-| Filter Field = Yes | Nothing to write: Signals makes every declared, non-private field filterable. If the field is PII, note that it can never be filtered |
-| Upload fields | Skipped; noted |
-
-Never write outside the output folder. Never copy rows from hidden sheets (they usually hold sample personal data).
+Integrators should get files, not a questionnaire. Don't ask questions; resolve every TODO with the defaults below, write what you decided in `decisions.md`, and list the main assumptions at the end. Stop to ask only if the workbook can't be read.
 
 ## Steps
 
-1. **Check Python** (do this yourself; don't ask the user):
-   - `python3 --version` must be **3.9 or newer** (tested on 3.9 and 3.14). On Windows try `py -3 --version` and use `py -3` instead of `python3` below.
-   - No Python 3, or older than 3.9: stop and tell the user to install Python 3.9+ from python.org (or their package manager). Don't install system software yourself.
-   - `python3 -c "import openpyxl"`. If missing, install it, trying in order until one works:
-     1. `python3 -m pip install -r ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/requirements.txt`
-     2. same with `--user` (for "externally-managed-environment" errors on newer macOS/Linux)
-     3. a virtual environment in the output folder: `python3 -m venv <output>/.venv` then `<output>/.venv/bin/pip install openpyxl`, and run the scripts with `<output>/.venv/bin/python` instead of `python3`
-   - If all three fail (e.g. a locked-down machine), tell the user installs are blocked and that `openpyxl` is needed.
+1. **Check Python** (yourself, no questions):
+   - `python3 --version` must be **3.9+** (Windows: `py -3`). Missing or older: tell the user to install Python 3.9+ from python.org; don't install system software.
+   - `python3 -c "import openpyxl"`. If missing, try in order: `python3 -m pip install -r ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/requirements.txt`, the same with `--user`, then a venv in the output folder (`python3 -m venv <out>/.venv`, run the scripts with `<out>/.venv/bin/python`). If all fail, say installs are blocked.
 
-2. **Extract** (its summary lists `warnings`: unmapped columns, unrecognised types, Yes/No cells with extra text, unrecognised sheets; carry every one into `decisions.md`):
+2. **Extract**:
    ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/extract_sheet.py "<workbook.xlsx>" -o <output>/.spec.json
+   python3 $S/extract_sheet.py "<workbook.xlsx>" -o <out>/.spec.json
+   ```
+   Its `warnings` (unmapped columns, unknown types, Yes/No cells with extra text, unrecognised sheets) go into `decisions.md`.
+
+3. **Draft decisions**:
+   - **Existing network** (the user has a `network.json` for this network, or the workbook is a newer version of a deployed schema): pass it, plus their four aggregator form files if they have them. Keys, titles, settings and everything the sheet doesn't define are kept; only real differences become TODOs.
+     ```bash
+     python3 $S/init_decisions.py <out>/.spec.json -o <out>/decisions.json --existing <their network.json> [--existing-forms <folder with the 4 form files>]
+     ```
+   - **New network**:
+     ```bash
+     python3 $S/init_decisions.py <out>/.spec.json -o <out>/decisions.json [--network-id <id>] [--display-name "<name>"]
+     ```
+
+4. **Resolve the TODOs** in `decisions.json` (its `todo` list), by editing `decisions.json` only:
+   - per field (`domains[].fields[]`, by sheet `row`): `key`, `title` (short label, 2–4 words), `description` (the sheet's question), `set` / `unset` (property attributes), `required` (true/false), `skip`, or `property` (a full property, e.g. an upload row kept as a URL field)
+   - per domain: `id`, `layout` (`x-form-layout`), `card`, `contact_fields`, `settings` (domain-level keys), `extra_properties` (fields with no sheet row), `required`, `order`
+   - network: `id`, `display_name`, `description`, `instance_url` / `instances`
+   - forms: `forms` (a JSON merge patch per form file, e.g. option labels) or `forms_full`
+
+   Defaults when unsure: keep the existing value; for a new network keep what the rules produced. Pairings "matched by elimination / fuzzy" are usually right; confirm by reading both titles. Note each resolution in `decisions.md` (one line: row, field, decision, why).
+
+5. **Build**:
+   ```bash
+   python3 $S/build.py <out>/.spec.json <out>/decisions.json <out>
    ```
 
-3. **Generate** `network.json`, `org-registration.v1.json` + `.ui.json`, `registration.v1.json` + `.ui.json` in the output folder using the defaults above and the mapping below. Write `<output>/decisions.md`: one line per assumption (row, field, what was decided, why).
-
-4. **Check**:
+6. **Check** (must print `0 problem(s)`; otherwise fix `decisions.json` and rebuild):
    ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/check_schema.py <output>/network.json
+   python3 $S/check_schema.py <out>/network.json <out>
    ```
-   Fix anything it reports and re-run until 0 problems. Confirm every aggregator form field is in its `.ui.json` `ui:order`.
+   It mirrors Signals' network config validation and the portal's form keys, plus: no private+vectorize field, no dangling `x-show-if` / `allOf` / card / layout references, `enum`/`enumNames` lengths, a primary map location per domain.
 
-5. **Report** (short): files written, field counts per domain, check result, and the top assumptions from `decisions.md` the user may want to change. The user edits `decisions.md` or replies with corrections; then regenerate.
+7. **Report** (short): files written, field counts per domain, check result, top assumptions from `decisions.md`.
 
-6. **Clean up**: delete `<output>/.spec.json` (and `<output>/.venv` if you created one). It's only a working copy of the workbook; the output folder should end with just the schema files and `decisions.md`.
+8. **Clean up**: delete `<out>/.spec.json` (and `<out>/.venv`). Keep `decisions.json`: with it the files can be regenerated after a workbook update.
 
-**Compare mode** (only when the user supplies a `network.json` to compare with): run
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/diff_network.py <output>/.spec.json <their-network.json> [SheetName=domain ...]
-```
-and report `CHANGED` / `NEW` / `ORPHAN` / `SKIP`, then delete `<output>/.spec.json`. Read-only: never edit their file.
+**Compare only** (the user just wants the differences): run step 2, then `python3 $S/diff_network.py <out>/.spec.json <their network.json>`, report, delete `.spec.json`. Never edit their file.
 
-## Mapping: profile sheets → `domains[].item_schemas.<type>.properties`
+## What the rules do (build.py), for reading decisions
 
-| Sheet column | network.json |
+| Sheet | network.json |
 |---|---|
-| **Framework** (WHO I AM / WHAT I HAVE / WHAT I WANT) | `x-form-layout.sections[]` (section title + field order) |
-| **Fields** | Short label as `title` (2–4 words, e.g. "Looking For", "Address"); the sheet's question text goes in `description` ("What are you looking for?"). Reuse an existing field's title. Strip trailing `*` |
-| **Required** = Yes | key in the schema's `required` array (Signals uses `required` as the go-live check; drafts can be saved incomplete) |
-| **Fields required to change profile status to live** (when the sheet has this column) | This column decides `required`. Fields marked only in "Required" are noted in decisions |
-| **Required** + **Depends On** (required only when shown, e.g. CRR Number when category = RCI) | Not in top-level `required`. Add `x-show-if` for the form **and** an `allOf` rule for the API: `{"if": {"properties": {"<parent>": {"const": "<value>"}}, "required": ["<parent>"]}, "then": {"required": ["<child>"]}}` |
-| **Type** `string` / `free text` / `free-text` | `"type": "string"` (`minLength: 1` if required) |
-| **Type** `number` | `integer` for counts/age (with `minimum`/`maximum`); a phone number stays `string` with a `pattern` and `x-error-message` |
-| **Type** `email` | `"type": "string", "format": "email"` |
-| **Type** `url` | `"type": "string", "x-uri": true` |
-| **Type** `dropdown` / `single select` | `"type": "string", "enum": [...]` |
-| **Type** `array selection` / `array` | `"type": "array", "items": {"type": "string", "enum": [...]}, "uniqueItems": true` |
-| **Type** `conditional dropdown` (+ blank-title rows below) | one property per variant, each with its own `enum` and `x-show-if` |
-| **Type** `dropdown with search` | `x-reference-source` (e.g. `{"source": "colleges"}`) instead of an inline enum |
-| **Type** `geo` | `"type": "string", "location": "primary"` for the map pin ("Map Discovery" column), else `"secondary"` |
-| **Type** `geo, array` (several places, e.g. service cities) | `"type": "array", "items": {"type": "string"}`, no `location` marker; noted in decisions |
-| **Type** `upload` | not supported: flag it, don't create a field |
-| Min/Max amount fields | `"type": "number", "minimum": 0` |
-| **Options** | `enum`, split on `;` or newline (single cells split on `/` or `,` by the extractor). When updating an existing network, keep each existing enum value's exact spelling: a sheet value that differs only in quotes, case or punctuation ("Parkinson’s" vs "Parkinson's") must not replace it |
-| An option named **Other** | add a companion free-text `<key>Other` with `x-show-if: {<key>: ["Other"]}` |
-| **Dependency** "Shown if X = 'a' or 'b'" | `"x-show-if": {"<xKey>": ["a", "b"]}` |
-| **PII Field** = Yes | `"private": true` |
-| **Unmask event** ("… → Connection Request Accepted") | the interaction's `reveals_pii_on_status`, e.g. `["accepted"]` |
-| **Vectorise** = Yes | `"vectorize": true`; `vector_weight: 2` for the main matching field (e.g. job roles) |
-| **Search Field** = Yes | no marker: text search covers every non-private field, ranked search follows `vectorize`. Extra text in the cell ("Yes (Limited to Area & City)") goes to decisions |
-| **Filter Field** = Yes | no marker (every declared non-private field is filterable). On a PII field: note it can't be filtered |
-| **Displayed on card** = Yes | domain `card.default_fields` |
-| **How it's used / In the bots** | not stored; context only |
+| Fields | `title`; a question goes in `description` with a short `title` (decisions) |
+| Required = Yes | in `required`; strings get `minLength: 1`, arrays `minItems: 1` |
+| Required + Depends On | not in `required`; `x-show-if` plus an `allOf` if/then rule |
+| Depends On ("visible only if category is RCI", "X = a") | `x-show-if: {<parent key>: [<value>]}` |
+| Type string / free text | `"type": "string"` |
+| number (phone / mobile in the title) | `"type": "string", "pattern": "^[0-9]{10}$"` |
+| number (other) | `"type": "integer"` |
+| email / url | `format: email` / `x-uri: true, maxLength: 2048` |
+| dropdown / single select | `"type": "string", "enum": [...]` |
+| array selection / array / multi select | `"type": "array", "items": {"enum": [...]}` |
+| dropdown with search | `x-reference-source` |
+| geo / geo, array | `location`: the sheet's "primary", else the first location field per domain is `primary`, the rest `secondary` |
+| upload | skipped, unless decisions map it to a field (e.g. a catalog URL) |
+| PII = Yes | `private: true` (PII wins over Vectorise: never both) |
+| Vectorise = Yes | `vectorize: true` (not on numbers, locations or PII) |
+| Search / Filter Field | no marker: every declared non-private field is searchable and filterable |
+| Interaction rules | `actions.connect.interactions` with the reference event schema, statuses and `reveals_pii_on_status: ["accepted","completed"]` |
+| Domain settings, status rules, dashboard, instances | `references/network.template.json` (or the existing network) |
+| Aggregator forms | `references/aggregator/` (the keys the portal's code reads); changes via `decisions.forms` |
 
-## Fixed rules (apply; list them in decisions.md)
+## Accuracy
 
-- **PII wins over Vectorise.** A field marked both is `private: true` with no `vectorize`. Private values are stored masked, so there is nothing to embed, and the search indexer would skip every item of that type.
-- Numbers and locations are never vectorized.
-- Server-set fields (consent timestamps) are not form fields.
-
-## Other sheets
-
-- **Interaction rules** → `actions`. Each `A --> B` block is an interaction (`from_domain`, `to_domain`). `Apply` → action `apply`, `Connect` → `connect`. Status values: Connect/Apply → `created`, Accept/Shortlist → `accepted`, Reject → `rejected`, Cancel → `cancelled`.
-- **Aggregator Owner sheet** → `org-registration.v1.json` (+ `.ui.json`); **Aggregator Coordinator sheet** → `registration.v1.json` (+ `.ui.json`).
-  - `Text (min 2, max 200 chars)` → `minLength`/`maxLength`; `URI` → `"format": "uri"`; email → `"format": "email"`; phone → `pattern`.
-  - Enum / array selection → snake_case `enum` values with readable `enumNames`.
-  - Dependency → `x-show-if`. Boolean consent → a `consent` object with a required `value`.
-  - Every field must appear in the `.ui.json` `ui:order`, or the form won't show it.
-- **Domains / URLs sheet** → informational only (web URLs); not the API `instance_url`.
+`tests/run_golden.py` rebuilds the Purple Dots (ALIMCO) schema from its Oct 2026 workbook and must match the deployed reference exactly (5/5 files); create mode must pass `check_schema.py`. Run it after any change to the scripts.

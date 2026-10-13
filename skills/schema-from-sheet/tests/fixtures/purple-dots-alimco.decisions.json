@@ -1,0 +1,1572 @@
+{
+  "network": {
+    "id": "purple_dot",
+    "display_name": "Purple Dots",
+    "description": "Discovery and services network for People with Disabilities.",
+    "instances": [
+      {
+        "instance_name": "Purple Dot Seeker Local",
+        "instance_url": "http://localhost:2742",
+        "custom_item_schema_urls": {},
+        "domain_id": "seeker"
+      },
+      {
+        "instance_name": "Purple Dot Service Provider Local",
+        "instance_url": "http://localhost:2742",
+        "custom_item_schema_urls": {},
+        "domain_id": "provider"
+      }
+    ]
+  },
+  "domains": [
+    {
+      "sheet": "Seeker_Profile_Schema",
+      "id": "seeker",
+      "fields": [
+        {
+          "row": 2,
+          "key": "beneficiary_name",
+          "title": "Name"
+        },
+        {
+          "row": 3,
+          "key": "mobile_number",
+          "title": "Mobile"
+        },
+        {
+          "row": 4,
+          "key": "email",
+          "title": "Email"
+        },
+        {
+          "row": 5,
+          "key": "age",
+          "title": "Age",
+          "set": {
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        {
+          "row": 6,
+          "key": "gender",
+          "title": "Gender"
+        },
+        {
+          "row": 7,
+          "key": "disability_type",
+          "title": "Disability",
+          "set": {
+            "vector_weight": 2,
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "Acid Attack Victim",
+                "Autism Spectrum Disorder",
+                "Blindness",
+                "Cerebral Palsy",
+                "Dwarfism",
+                "Hearing Impairment",
+                "Hemophilia",
+                "Intellectual Disability",
+                "Leprosy Cured",
+                "Locomotor Disability",
+                "Low Vision",
+                "Mental Illness",
+                "Multiple Sclerosis",
+                "Muscular Dystrophy",
+                "Parkinson's Disease",
+                "Sickle Cell Disease",
+                "Specific Learning Disabilities",
+                "Speech and Language Disability",
+                "Thalassemia",
+                "Chronic Neurological Conditions",
+                "Deaf",
+                "Multiple Disabilities including deaf-blindness",
+                "Mental Retardation"
+              ]
+            }
+          }
+        },
+        {
+          "row": 8,
+          "key": "disability_percentage",
+          "title": "Disability %",
+          "set": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "unset": [
+            "vectorize"
+          ]
+        },
+        {
+          "row": 9,
+          "key": "looking_for",
+          "title": "Looking For",
+          "description": "What are you looking for?",
+          "set": {
+            "minItems": 1
+          }
+        },
+        {
+          "row": 10,
+          "key": "looking_for_details",
+          "title": "Details",
+          "description": "Explain your needs in detail",
+          "set": {
+            "minLength": 1,
+            "vector_weight": 2
+          }
+        },
+        {
+          "row": 11,
+          "key": "address",
+          "title": "Address",
+          "description": "Street, City or Village, District, where you can receive the service or support",
+          "set": {
+            "minLength": 1,
+            "location": "primary"
+          }
+        },
+        {
+          "row": 12,
+          "key": "documents_available",
+          "title": "Documents",
+          "description": "Which documents do you have?",
+          "set": {
+            "minItems": 1
+          },
+          "unset": [
+            "vectorize"
+          ]
+        },
+        {
+          "row": 13,
+          "key": "highest_qualification",
+          "title": "Qualification",
+          "description": "Highest qualification"
+        }
+      ],
+      "item_type": "profile_1.0",
+      "schema_title": "PWD Seeker Profile 1.0",
+      "order": [
+        "beneficiary_name",
+        "mobile_number",
+        "email",
+        "age",
+        "gender",
+        "disability_type",
+        "disability_percentage",
+        "looking_for",
+        "looking_for_details",
+        "address",
+        "documents_available",
+        "highest_qualification"
+      ],
+      "required": [
+        "beneficiary_name",
+        "mobile_number"
+      ],
+      "all_of": [],
+      "layout": {
+        "sections": [
+          {
+            "title": "Personal Details",
+            "fields": [
+              "beneficiary_name",
+              "age",
+              "gender",
+              "mobile_number",
+              "email"
+            ]
+          },
+          {
+            "title": "Disability Profile",
+            "fields": [
+              "disability_type",
+              "disability_percentage",
+              "looking_for",
+              "looking_for_details"
+            ]
+          },
+          {
+            "title": "Location",
+            "fields": [
+              "address"
+            ]
+          },
+          {
+            "title": "Documents & Education",
+            "fields": [
+              "documents_available",
+              "highest_qualification"
+            ]
+          }
+        ],
+        "twoColumn": [
+          "age",
+          "gender",
+          "mobile_number",
+          "email"
+        ]
+      },
+      "card": {
+        "title_field": "beneficiary_name",
+        "avatar_from": "beneficiary_name",
+        "default_fields": [
+          "disability_type",
+          "looking_for",
+          "highest_qualification"
+        ]
+      },
+      "contact_fields": {
+        "name": "beneficiary_name",
+        "phone": "mobile_number",
+        "email": "email"
+      },
+      "settings": {
+        "description": "Persons with disabilities seeking services, devices, training, or other support.",
+        "minimum_cache_ttl_seconds": 300,
+        "status_rules": [
+          {
+            "status": "new",
+            "label": "New",
+            "description": "Joined within the last 7 days",
+            "when": {
+              "item_age_days": {
+                "lte": 7
+              }
+            }
+          },
+          {
+            "status": "active",
+            "label": "Active",
+            "description": "Connected with a provider in the last 30 days",
+            "when": {
+              "days_since_last": {
+                "buckets": [
+                  "create",
+                  "accept"
+                ],
+                "lte": 30
+              }
+            }
+          },
+          {
+            "status": "at_risk",
+            "label": "At Risk",
+            "description": "No activity for 30–90 days",
+            "when": {
+              "days_since_last": {
+                "buckets": [
+                  "create",
+                  "accept",
+                  "reject"
+                ],
+                "between": [
+                  31,
+                  90
+                ]
+              }
+            }
+          },
+          {
+            "status": "inactive",
+            "label": "Inactive",
+            "description": "No activity 90+ days",
+            "when": "default"
+          }
+        ],
+        "profile_completion_prompt": {
+          "heading": "Complete your profile to find the right support",
+          "body": "Providers can find and connect with you only once your profile is live. Fill in the details below to get matched with the services and support you need."
+        },
+        "go_live_required": [
+          "schema_required",
+          "consent_required"
+        ],
+        "my_items_label": "My Actions",
+        "guardian_consent_required": true,
+        "dashboard_tiles": {
+          "profile": [
+            {
+              "field": "total_items",
+              "label": "Profiles Registered"
+            },
+            {
+              "field": "complete_profiles",
+              "label": "Profiles Complete"
+            },
+            {
+              "field": "has_applications",
+              "label": "Made Connections"
+            }
+          ],
+          "user": [
+            {
+              "field": "total_users",
+              "label": "Total Seekers"
+            },
+            {
+              "field": "avg_items_per_user",
+              "label": "Avg Profiles per User"
+            },
+            {
+              "field": "avg_actions_per_user",
+              "label": "Avg Actions per User"
+            }
+          ]
+        }
+      },
+      "domain_key_order": [
+        "description",
+        "minimum_cache_ttl_seconds",
+        "status_rules",
+        "item_schemas",
+        "profile_completion_prompt",
+        "id",
+        "go_live_required",
+        "my_items_label",
+        "guardian_consent_required",
+        "card",
+        "contact_fields",
+        "dashboard_tiles"
+      ]
+    },
+    {
+      "sheet": "ServiceProvider_MyServices_Sche",
+      "id": "provider",
+      "fields": [
+        {
+          "row": 2,
+          "key": "contact_name",
+          "title": "Contact Name"
+        },
+        {
+          "row": 3,
+          "key": "contact_phone",
+          "title": "Phone"
+        },
+        {
+          "row": 4,
+          "key": "contact_email",
+          "title": "Email"
+        },
+        {
+          "row": 5,
+          "key": "provider_category",
+          "title": "Category",
+          "description": "Select the category that applies to you",
+          "unset": [
+            "minLength"
+          ]
+        },
+        {
+          "row": 6,
+          "key": "crr_number",
+          "title": "CRR Number",
+          "set": {
+            "type": "string",
+            "pattern": "^$|^[0-9]+$",
+            "x-error-message": "Enter your CRR number using digits only.",
+            "x-show-if": {
+              "provider_category": [
+                "RCI"
+              ]
+            }
+          }
+        },
+        {
+          "row": 7,
+          "key": "professional_type",
+          "title": "Type of Professional",
+          "set": {
+            "x-show-if": {
+              "provider_category": [
+                "RCI"
+              ]
+            }
+          }
+        },
+        {
+          "row": 8,
+          "key": "organisation_name",
+          "title": "Organisation",
+          "description": "Name of your organisation (or your name if individual)"
+        },
+        {
+          "row": 9,
+          "key": "website",
+          "title": "Website",
+          "description": "Not required at signup; can be added or edited later"
+        },
+        {
+          "row": 10,
+          "key": "disabilities_served",
+          "title": "Disabilities Served",
+          "description": "What type of seekers are you looking for?",
+          "set": {
+            "vector_weight": 2,
+            "items": {
+              "type": "string",
+              "enum": [
+                "Acid Attack Victim",
+                "Autism Spectrum Disorder",
+                "Blindness",
+                "Cerebral Palsy",
+                "Dwarfism",
+                "Hearing Impairment",
+                "Hemophilia",
+                "Intellectual Disability",
+                "Leprosy Cured",
+                "Locomotor Disability",
+                "Low Vision",
+                "Mental Illness",
+                "Multiple Sclerosis",
+                "Muscular Dystrophy",
+                "Parkinson's Disease",
+                "Sickle Cell Disease",
+                "Specific Learning Disabilities",
+                "Speech and Language Disability",
+                "Thalassemia",
+                "Chronic Neurological Conditions",
+                "Deaf",
+                "Multiple Disabilities including deaf-blindness",
+                "Mental Retardation"
+              ]
+            }
+          }
+        },
+        {
+          "row": 11,
+          "key": "services_offered",
+          "title": "Services Offered",
+          "description": "What services or support do you provide?"
+        },
+        {
+          "row": 12,
+          "key": "service_cities",
+          "title": "Service Cities",
+          "description": "Cities where seekers can access your services",
+          "set": {
+            "location": "primary",
+            "maxItems": 5
+          }
+        },
+        {
+          "row": 13,
+          "key": "official_address",
+          "title": "Organisation Address",
+          "description": "Your organisation's office or headquarters address",
+          "set": {
+            "location": "secondary"
+          },
+          "unset": [
+            "private"
+          ]
+        },
+        {
+          "row": 14,
+          "key": "service_details",
+          "title": "Service Details",
+          "description": "Share more about the service, opportunity, or support provided",
+          "set": {
+            "vector_weight": 2
+          }
+        },
+        {
+          "row": 15,
+          "key": "catalog_url",
+          "property": {
+            "type": "string",
+            "title": "Catalog URL",
+            "description": "URL to a catalog or service list you provide",
+            "format": "uri"
+          }
+        }
+      ],
+      "item_type": "profile_1.0",
+      "schema_title": "PWD Service Provider Profile 1.0",
+      "display_name_field": "organisation_name",
+      "order": [
+        "contact_name",
+        "contact_phone",
+        "contact_email",
+        "provider_category",
+        "crr_number",
+        "professional_type",
+        "organisation_name",
+        "website",
+        "disabilities_served",
+        "services_offered",
+        "service_cities",
+        "official_address",
+        "service_details",
+        "catalog_url"
+      ],
+      "required": [
+        "contact_name",
+        "contact_phone",
+        "provider_category",
+        "organisation_name",
+        "disabilities_served",
+        "services_offered",
+        "service_cities",
+        "official_address",
+        "service_details"
+      ],
+      "all_of": [
+        {
+          "if": {
+            "properties": {
+              "provider_category": {
+                "const": "RCI"
+              }
+            },
+            "required": [
+              "provider_category"
+            ]
+          },
+          "then": {
+            "required": [
+              "crr_number",
+              "professional_type"
+            ],
+            "properties": {
+              "crr_number": {
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ],
+      "layout": {
+        "sections": [
+          {
+            "title": "Contact Details",
+            "fields": [
+              "contact_name",
+              "contact_phone",
+              "contact_email"
+            ]
+          },
+          {
+            "title": "Organisation",
+            "fields": [
+              "provider_category",
+              "crr_number",
+              "professional_type",
+              "organisation_name",
+              "website",
+              "official_address"
+            ]
+          },
+          {
+            "title": "Services & Coverage",
+            "fields": [
+              "disabilities_served",
+              "services_offered",
+              "service_cities"
+            ]
+          },
+          {
+            "title": "More Details",
+            "fields": [
+              "service_details",
+              "catalog_url"
+            ]
+          }
+        ],
+        "twoColumn": [
+          "contact_phone",
+          "contact_email"
+        ]
+      },
+      "card": {
+        "title_field": "organisation_name",
+        "avatar_from": "organisation_name",
+        "default_fields": [
+          "provider_category",
+          "professional_type",
+          "services_offered",
+          "service_cities",
+          "disabilities_served"
+        ],
+        "extra_fields": [
+          "contact_name",
+          "contact_phone",
+          "contact_email",
+          "organisation_name",
+          "website",
+          "official_address",
+          "service_details",
+          "catalog_url"
+        ]
+      },
+      "contact_fields": {
+        "name": "contact_name",
+        "phone": "contact_phone",
+        "email": "contact_email"
+      },
+      "settings": {
+        "description": "Organisations and individuals providing services, devices, training, or other support for persons with disabilities.",
+        "minimum_cache_ttl_seconds": 300,
+        "status_rules": [
+          {
+            "status": "new",
+            "label": "New",
+            "description": "Service posted within the last 7 days",
+            "when": {
+              "item_age_days": {
+                "lte": 7
+              }
+            }
+          },
+          {
+            "status": "active",
+            "label": "Active",
+            "description": "Accepted or rejected a request in the last 30 days",
+            "when": {
+              "all": [
+                {
+                  "count": {
+                    "buckets": [
+                      "create"
+                    ],
+                    "gt": 0
+                  }
+                },
+                {
+                  "days_since_last": {
+                    "buckets": [
+                      "accept",
+                      "reject"
+                    ],
+                    "lte": 30
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "status": "at_risk",
+            "label": "At Risk",
+            "description": "No responses for 30–90 days",
+            "when": {
+              "all": [
+                {
+                  "count": {
+                    "buckets": [
+                      "create"
+                    ],
+                    "gt": 0
+                  }
+                },
+                {
+                  "days_since_last": {
+                    "buckets": [
+                      "accept",
+                      "reject"
+                    ],
+                    "between": [
+                      31,
+                      90
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "status": "inactive",
+            "label": "Inactive",
+            "description": "No activity for 90+ days",
+            "when": "default"
+          }
+        ],
+        "profile_completion_prompt": {
+          "heading": "Complete your profile to reach people who need support",
+          "body": "People looking for services can discover and connect with you only once your profile is live. Add your details below to start helping."
+        },
+        "label": "Service Provider",
+        "plural_label": "Service Providers",
+        "go_live_required": [
+          "schema_required",
+          "consent_required"
+        ],
+        "my_items_label": "My Services",
+        "dashboard_tiles": {
+          "profile": [
+            {
+              "field": "total_items",
+              "label": "Profiles Registered"
+            },
+            {
+              "field": "complete_profiles",
+              "label": "Profiles Complete"
+            },
+            {
+              "field": "has_applications",
+              "label": "Received Connections"
+            }
+          ],
+          "user": [
+            {
+              "field": "total_users",
+              "label": "Total Service Providers"
+            },
+            {
+              "field": "avg_items_per_user",
+              "label": "Avg Profiles per User"
+            },
+            {
+              "field": "avg_actions_per_user",
+              "label": "Avg Actions per User"
+            }
+          ]
+        }
+      },
+      "domain_key_order": [
+        "description",
+        "minimum_cache_ttl_seconds",
+        "status_rules",
+        "item_schemas",
+        "profile_completion_prompt",
+        "id",
+        "label",
+        "plural_label",
+        "go_live_required",
+        "my_items_label",
+        "card",
+        "contact_fields",
+        "dashboard_tiles"
+      ]
+    }
+  ],
+  "actions": {
+    "connect": {
+      "description": "Lets a seeker and a provider request a connection with each other. Either party can initiate; the receiver can accept, reject, or the initiator can cancel before the receiver responds.",
+      "interactions": [
+        {
+          "from_network": "purple_dot",
+          "from_domain": "seeker",
+          "to_network": "purple_dot",
+          "to_domain": "provider",
+          "column_fields": {
+            "from": [
+              "disability_type",
+              "looking_for",
+              "highest_qualification"
+            ],
+            "to": [
+              "provider_category",
+              "organisation_name",
+              "services_offered",
+              "service_cities"
+            ]
+          },
+          "requirement_schema": {
+            "type": "object",
+            "properties": {}
+          },
+          "event_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "Seeker To Provider Connect Event",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "remark"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "created",
+                  "accepted",
+                  "completed",
+                  "rejected",
+                  "cancelled"
+                ]
+              },
+              "remark": {
+                "type": "string"
+              }
+            }
+          },
+          "metric_categories": {
+            "create": [
+              "created"
+            ],
+            "accept": [
+              "accepted"
+            ],
+            "reject": [
+              "rejected"
+            ],
+            "cancel": [
+              "cancelled"
+            ]
+          },
+          "reveals_pii_on_status": [
+            "accepted",
+            "completed"
+          ],
+          "export": {
+            "requester_domains": [
+              "provider"
+            ]
+          }
+        },
+        {
+          "from_network": "purple_dot",
+          "from_domain": "provider",
+          "to_network": "purple_dot",
+          "to_domain": "seeker",
+          "column_fields": {
+            "from": [
+              "provider_category",
+              "organisation_name",
+              "services_offered",
+              "service_cities"
+            ],
+            "to": [
+              "disability_type",
+              "looking_for",
+              "highest_qualification"
+            ]
+          },
+          "requirement_schema": {
+            "type": "object",
+            "properties": {}
+          },
+          "event_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "Provider To Seeker Connect Event",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "remark"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "created",
+                  "accepted",
+                  "completed",
+                  "rejected",
+                  "cancelled"
+                ]
+              },
+              "remark": {
+                "type": "string"
+              }
+            }
+          },
+          "metric_categories": {
+            "create": [
+              "created"
+            ],
+            "accept": [
+              "accepted"
+            ],
+            "reject": [
+              "rejected"
+            ],
+            "cancel": [
+              "cancelled"
+            ]
+          },
+          "reveals_pii_on_status": [
+            "accepted",
+            "completed"
+          ],
+          "export": {
+            "requester_domains": [
+              "provider"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "dashboard_buckets": {
+    "by_status": {
+      "new": "New",
+      "active": "Active",
+      "at_risk": "At Risk",
+      "inactive": "Inactive"
+    },
+    "by_initiated_action_status": {
+      "create": "Requested",
+      "accept": "Accepted",
+      "reject": "Declined",
+      "cancel": "Cancelled"
+    },
+    "by_received_action_status": {
+      "create": "Requests",
+      "accept": "Connected",
+      "reject": "Declined",
+      "cancel": "Cancelled"
+    }
+  },
+  "forms_full": {
+    "org-registration.v1.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://schemas.bluedots.org/aggregator/org-registration.v1.json",
+      "title": "Organisation Registration",
+      "description": "Signup payload for a new parent organisation (spec §6.1). Captures the org display name, optional state, the org owner's contact identity, and consent. The URL slug is generated by the server at submit and is not supplied by the client. Coordinators register separately and select an approved org.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "display_name",
+        "aggregator_type",
+        "organisation_type",
+        "owner",
+        "consent"
+      ],
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "title": "Organisation Name",
+          "minLength": 2,
+          "maxLength": 200,
+          "examples": [
+            "ABC Limited",
+            "XYZ Foundation"
+          ]
+        },
+        "website": {
+          "type": "string",
+          "title": "Website",
+          "format": "uri",
+          "maxLength": 2048,
+          "description": "Not required at signup; can be added or edited later.",
+          "examples": [
+            "https://abclimited.org"
+          ],
+          "x-updatable": true
+        },
+        "aggregator_type": {
+          "type": "array",
+          "title": "Aggregator Type",
+          "description": "Which participants this organisation represents. Captured as information only — it does not restrict what its coordinators can do.",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "seeker",
+              "provider"
+            ]
+          },
+          "examples": [
+            [
+              "seeker"
+            ],
+            [
+              "provider"
+            ],
+            [
+              "seeker",
+              "provider"
+            ]
+          ]
+        },
+        "organisation_type": {
+          "type": "string",
+          "title": "Organisation Type",
+          "description": "The broad category that describes your organisation.",
+          "enum": [
+            "ngo",
+            "government_entity",
+            "private_company",
+            "community_group",
+            "other"
+          ]
+        },
+        "address": {
+          "type": "object",
+          "title": "Address",
+          "description": "Street onwards for the organisation.",
+          "additionalProperties": false,
+          "properties": {
+            "streetAddress": {
+              "type": "string",
+              "title": "Street",
+              "maxLength": 300
+            },
+            "addressLocality": {
+              "type": "string",
+              "title": "City",
+              "maxLength": 200
+            },
+            "addressDistrict": {
+              "type": "string",
+              "title": "District",
+              "maxLength": 200
+            },
+            "addressRegion": {
+              "type": "string",
+              "title": "State",
+              "maxLength": 200
+            },
+            "postalCode": {
+              "type": "string",
+              "title": "PIN code",
+              "maxLength": 20
+            },
+            "addressCountry": {
+              "type": "string",
+              "title": "Country",
+              "maxLength": 100
+            }
+          }
+        },
+        "state": {
+          "type": "string",
+          "title": "State",
+          "description": "Derived from the address block on this instance; not asked for separately.",
+          "maxLength": 200
+        },
+        "owner": {
+          "type": "object",
+          "title": "Organisation Owner",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "phone",
+            "email"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Owner Name",
+              "minLength": 2,
+              "maxLength": 200,
+              "examples": [
+                "Rajesh Kumar"
+              ]
+            },
+            "phone": {
+              "type": "string",
+              "title": "Phone",
+              "pattern": "^(\\+?\\d{10,15}|\\d{10})$",
+              "examples": [
+                "+919876543210",
+                "9876543210"
+              ]
+            },
+            "email": {
+              "type": "string",
+              "title": "Email",
+              "format": "email",
+              "maxLength": 320,
+              "examples": [
+                "owner@abclimited.org"
+              ]
+            }
+          }
+        },
+        "consent": {
+          "type": "object",
+          "title": "Terms & Privacy Consent",
+          "additionalProperties": false,
+          "required": [
+            "value"
+          ],
+          "properties": {
+            "value": {
+              "type": "boolean",
+              "title": "I have read and accept the terms and privacy policy"
+            },
+            "given_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "valid_till": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    },
+    "org-registration.v1.ui.json": {
+      "ui:layout": "stack",
+      "ui:order": [
+        "display_name",
+        "website",
+        "aggregator_type",
+        "organisation_type",
+        "address",
+        "state",
+        "owner",
+        "consent"
+      ],
+      "display_name": {
+        "ui:placeholder": "e.g. ABC Limited",
+        "ui:autofocus": true
+      },
+      "state": {
+        "ui:widget": "hidden",
+        "ui:options": {
+          "label": false
+        }
+      },
+      "owner": {
+        "ui:layout": "grid",
+        "ui:order": [
+          "name",
+          "phone",
+          "email"
+        ],
+        "name": {
+          "ui:placeholder": "Full name of the organisation owner"
+        },
+        "phone": {
+          "ui:placeholder": "+91 98765 43210",
+          "ui:options": {
+            "inputType": "tel"
+          }
+        },
+        "email": {
+          "ui:placeholder": "owner@yourorg.org",
+          "ui:options": {
+            "inputType": "email"
+          }
+        }
+      },
+      "consent": {
+        "ui:layout": "stack",
+        "ui:order": [
+          "value",
+          "given_at",
+          "valid_till"
+        ],
+        "value": {
+          "ui:widget": "ConsentCheckbox"
+        },
+        "given_at": {
+          "ui:widget": "hidden",
+          "ui:options": {
+            "label": false
+          }
+        },
+        "valid_till": {
+          "ui:widget": "hidden",
+          "ui:options": {
+            "label": false
+          }
+        }
+      },
+      "website": {
+        "ui:placeholder": "https://yourorg.org",
+        "ui:options": {
+          "inputType": "url"
+        }
+      },
+      "aggregator_type": {
+        "ui:widget": "checkboxes",
+        "ui:enumNames": [
+          "Seekers",
+          "Service Providers"
+        ],
+        "ui:options": {
+          "inline": true
+        }
+      },
+      "address": {
+        "ui:layout": "grid",
+        "ui:order": [
+          "streetAddress",
+          "addressLocality",
+          "addressDistrict",
+          "addressRegion",
+          "postalCode",
+          "addressCountry"
+        ],
+        "streetAddress": {
+          "ui:placeholder": "Street, Area"
+        },
+        "addressLocality": {
+          "ui:placeholder": "City"
+        },
+        "addressDistrict": {
+          "ui:placeholder": "District"
+        },
+        "addressRegion": {
+          "ui:placeholder": "State"
+        },
+        "postalCode": {
+          "ui:placeholder": "PIN"
+        },
+        "addressCountry": {
+          "ui:placeholder": "India"
+        }
+      },
+      "organisation_type": {
+        "ui:widget": "select",
+        "ui:placeholder": "Select organisation type",
+        "ui:enumNames": [
+          "NGO",
+          "Government Entity",
+          "Private Company",
+          "Community Group",
+          "Others"
+        ]
+      }
+    },
+    "registration.v1.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://schemas.bluedots.org/aggregator/registration.v1.json",
+      "title": "Aggregator Registration",
+      "description": "Signup payload for a new Aggregator account. Captures only the identity, contact, optional locations, and consent needed to create a Keycloak user and let the aggregator log in. Personas, services, verified certificates, and the contact-name label are filled in afterwards through the profile-completion flow.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type",
+        "contact",
+        "consent"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Organisation Name",
+          "minLength": 2,
+          "maxLength": 200,
+          "examples": [
+            "ABC Limited",
+            "XYZ Foundation"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "title": "Aggregator Type",
+          "enum": [
+            "seeker",
+            "provider"
+          ]
+        },
+        "sub_org_name": {
+          "type": "string",
+          "title": "Sub-Org / Division / Vertical / Institution Name",
+          "description": "Any specific sub-identity needed for identification and tracking. May be the same as the organisation name.",
+          "maxLength": 200,
+          "x-updatable": true
+        },
+        "url": {
+          "type": "string",
+          "title": "Website",
+          "format": "uri",
+          "maxLength": 2048,
+          "examples": [
+            "https://abclimited.org"
+          ],
+          "x-updatable": true
+        },
+        "locations": {
+          "type": "array",
+          "title": "Location",
+          "maxItems": 1,
+          "x-updatable": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "geo",
+              "address"
+            ],
+            "properties": {
+              "geo": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "coordinates"
+                ],
+                "default": {
+                  "type": "Point",
+                  "coordinates": [
+                    0,
+                    0
+                  ]
+                },
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Point",
+                      "LineString",
+                      "Polygon",
+                      "MultiPoint",
+                      "MultiLineString",
+                      "MultiPolygon",
+                      "GeometryCollection"
+                    ],
+                    "default": "Point"
+                  },
+                  "coordinates": {
+                    "type": "array",
+                    "default": [
+                      0,
+                      0
+                    ]
+                  }
+                }
+              },
+              "address": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "streetAddress": {
+                    "type": "string",
+                    "title": "Street"
+                  },
+                  "addressLocality": {
+                    "type": "string",
+                    "title": "City"
+                  },
+                  "addressRegion": {
+                    "type": "string",
+                    "title": "State"
+                  },
+                  "postalCode": {
+                    "type": "string",
+                    "title": "PIN code"
+                  },
+                  "addressCountry": {
+                    "type": "string",
+                    "title": "Country",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "contact": {
+          "type": "object",
+          "title": "Primary Contact",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "phone",
+            "email"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Contact Name",
+              "minLength": 2,
+              "maxLength": 200,
+              "examples": [
+                "Rajesh Kumar"
+              ]
+            },
+            "phone": {
+              "type": "string",
+              "title": "Phone",
+              "pattern": "^(\\+?\\d{10,15}|\\d{10})$",
+              "examples": [
+                "+919876543210",
+                "9876543210"
+              ]
+            },
+            "email": {
+              "type": "string",
+              "title": "Email",
+              "format": "email",
+              "maxLength": 320,
+              "examples": [
+                "admin@abclimited.org"
+              ]
+            }
+          }
+        },
+        "consent": {
+          "type": "object",
+          "title": "Terms & Privacy Consent",
+          "additionalProperties": false,
+          "required": [
+            "value"
+          ],
+          "properties": {
+            "value": {
+              "type": "boolean",
+              "title": "I have read and accept the terms and privacy policy"
+            },
+            "given_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "valid_till": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    },
+    "registration.v1.ui.json": {
+      "ui:layout": "stack",
+      "ui:order": [
+        "name",
+        "type",
+        "sub_org_name",
+        "url",
+        "contact",
+        "locations",
+        "consent"
+      ],
+      "locations": {
+        "ui:options": {
+          "addable": true,
+          "removable": true,
+          "orderable": false,
+          "itemLabel": "Location"
+        },
+        "items": {
+          "ui:title": "",
+          "ui:layout": "stack",
+          "ui:order": [
+            "address",
+            "geo"
+          ],
+          "geo": {
+            "ui:widget": "hidden",
+            "ui:title": "",
+            "type": {
+              "ui:widget": "hidden"
+            },
+            "coordinates": {
+              "ui:widget": "hidden"
+            },
+            "geometries": {
+              "ui:widget": "hidden"
+            },
+            "bbox": {
+              "ui:widget": "hidden"
+            }
+          },
+          "address": {
+            "ui:title": "",
+            "ui:layout": "grid",
+            "ui:order": [
+              "streetAddress",
+              "addressLocality",
+              "addressRegion",
+              "postalCode",
+              "addressCountry"
+            ],
+            "streetAddress": {
+              "ui:placeholder": "Street"
+            },
+            "addressLocality": {
+              "ui:placeholder": "City"
+            },
+            "addressRegion": {
+              "ui:placeholder": "State"
+            },
+            "postalCode": {
+              "ui:placeholder": "PIN"
+            },
+            "addressCountry": {
+              "ui:placeholder": "India"
+            }
+          }
+        }
+      },
+      "name": {
+        "ui:placeholder": "e.g. ABC Limited",
+        "ui:autofocus": true
+      },
+      "type": {
+        "ui:widget": "select",
+        "ui:placeholder": "Select aggregator type",
+        "ui:enumNames": [
+          "Seeker",
+          "Service Provider"
+        ]
+      },
+      "url": {
+        "ui:placeholder": "https://abclimited.org",
+        "ui:options": {
+          "inputType": "url"
+        }
+      },
+      "contact": {
+        "ui:layout": "grid",
+        "ui:order": [
+          "name",
+          "phone",
+          "email"
+        ],
+        "name": {
+          "ui:placeholder": "Full name of the primary contact"
+        },
+        "phone": {
+          "ui:placeholder": "+91 98765 43210",
+          "ui:options": {
+            "inputType": "tel"
+          }
+        },
+        "email": {
+          "ui:placeholder": "admin@yourorg.in",
+          "ui:options": {
+            "inputType": "email"
+          }
+        }
+      },
+      "consent": {
+        "ui:layout": "stack",
+        "ui:order": [
+          "value",
+          "given_at",
+          "valid_till"
+        ],
+        "value": {
+          "ui:widget": "ConsentCheckbox"
+        },
+        "given_at": {
+          "ui:widget": "hidden",
+          "ui:options": {
+            "label": false
+          }
+        },
+        "valid_till": {
+          "ui:widget": "hidden",
+          "ui:options": {
+            "label": false
+          }
+        }
+      },
+      "sub_org_name": {
+        "ui:placeholder": "e.g. branch, centre or division name"
+      }
+    }
+  },
+  "todo": [
+    "Seeker_Profile_Schema R2 'Candidate Name' matched to existing 'beneficiary_name' by elimination; confirm",
+    "Seeker_Profile_Schema R4 'Email Id' matched to existing 'email' by fuzzy; confirm",
+    "Seeker_Profile_Schema R7 disability_type: 'items' differs from the sheet; kept existing {\"type\": \"string\", \"enum\": [\"Acid Attack Victim\", \"Autism Spectrum Disorder\", \"B",
+    "Seeker_Profile_Schema R8 disability_percentage: 'type' differs from the sheet; kept existing \"integer\"",
+    "Seeker_Profile_Schema R13 'What is your highest qualification?' matched to existing 'highest_qualification' by fuzzy; confirm",
+    "ServiceProvider_MyServices_Sche R3 'Contact phone number' matched to existing 'contact_phone' by fuzzy; confirm",
+    "ServiceProvider_MyServices_Sche R6 crr_number: 'type' differs from the sheet; kept existing \"string\"",
+    "ServiceProvider_MyServices_Sche R10 disabilities_served: 'items' differs from the sheet; kept existing {\"type\": \"string\", \"enum\": [\"Acid Attack Victim\", \"Autism Spectrum Disorder\", \"B",
+    "ServiceProvider_MyServices_Sche R12 'In which areas, and cities do you provide the service?' matched to existing 'service_cities' by elimination; confirm",
+    "ServiceProvider_MyServices_Sche R13 'What is your official address?' matched to existing 'official_address' by fuzzy; confirm",
+    "ServiceProvider_MyServices_Sche R14 'Share more details about the service, opportunity or support provided.' matched to existing 'service_details' by fuzzy; confirm",
+    "ServiceProvider_MyServices_Sche R15 'Upload a file with catalog or service list that you provide': upload row kept as existing field 'catalog_url'",
+    "extractor: Seeker_Profile_Schema R10: search cell has extra text: \"Limited to Area & City\"",
+    "extractor: Seeker_Profile_Schema R10: filter cell has extra text: \"Limited to Area & City\"",
+    "extractor: Config Emails: sheet not recognised; nothing extracted from it"
+  ]
+}
