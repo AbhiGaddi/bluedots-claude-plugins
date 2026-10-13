@@ -1,24 +1,43 @@
 """Shared sheet-row -> network.json property matching.
 
-Two passes so an exact title always wins: pass 1 pairs rows whose title (or the
-cell's second line, the old label) names exactly one free property; pass 2 pairs
-the rest by dependency (conditional variants -> the property whose x-show-if
-holds that value) and finally by fuzzy title.
+A wrong pairing is worse than no pairing (its CHANGED attributes would be
+false), so matching is conservative:
+  pass 1  exact: title, description (where the question lives), the cell's
+          second line (old label), or the property key ("Disability Type" ->
+          disability_type)
+  pass 2  conditional variants by dependency value (x-show-if)
+  pass 3  fuzzy title, only when one candidate is clearly best
+Anything else stays NEW / ORPHAN for a person to decide.
 """
 import difflib
 import re
 
 
 def norm(t):
-    return re.sub(r"[^a-z0-9]+", "", (t or "").lower())
+    t = (t or "").lower().replace("%", " percent ").replace("#", " number ").replace("&", " and ")
+    t = t.replace("’", "'").replace("‘", "'")
+    return re.sub(r"[^a-z0-9]+", "", t)
 
 
 def dep_values(dep):
-    """Values named in a dependency, e.g. "if highest qualification = PU College" -> ["pucollege"]."""
-    if "=" not in dep:
-        return []
-    rhs = dep.split("=", 1)[1]
-    return [norm(p) for p in re.split(r"\bor\b|/|;|,|'", rhs) if norm(p)]
+    """Values a dependency names, from every clause:
+    "if X = PU College", "visible only if category chosen is RCI",
+    "Organisation Type = Educational and Who can contact = Job Seekers"."""
+    out = []
+    for clause in re.split(r"\band\b|\n", dep or "", flags=re.I):
+        m = re.search(r"(?:=|\bis\b|\bequals\b)\s*(.+)$", clause, re.I)
+        if m:
+            out += [norm(p) for p in re.split(r"\bor\b|/|;|,|'|\"", m.group(1)) if norm(p)]
+    return out
+
+
+def option_overlap(row, prop):
+    """Share of the row's options found in the property's enum (0..1)."""
+    opts = {norm(o) for o in row.get("options") or []}
+    enum = prop.get("enum") or (prop.get("items") or {}).get("enum") or []
+    if not opts or not enum:
+        return 0.0
+    return len(opts & {norm(e) for e in enum}) / len(opts)
 
 
 def dep_score(row, prop):
@@ -36,43 +55,80 @@ def dep_score(row, prop):
     return score
 
 
+def similarity(target, key, prop):
+    return max(difflib.SequenceMatcher(None, target, norm(prop.get("title", ""))).ratio(),
+               difflib.SequenceMatcher(None, target, norm(key)).ratio(),
+               difflib.SequenceMatcher(None, target, norm(prop.get("description", ""))).ratio())
+
+
 def match_all(rows, props):
     """rows: sheet rows (dicts); props: [(key, prop)]. Returns {row index: ((key, prop), how)}."""
-    by_title = {}
+    by_name = {}
     for k, p in props:
-        by_title.setdefault(norm(p.get("title", k)), []).append((k, p))
+        # The sheet often carries the question ("What are you looking for?") that the
+        # schema keeps in `description`, with a short `title` ("Looking For").
+        for name in {norm(p.get("title", "")), norm(k), norm(p.get("description", ""))}:
+            if name:
+                by_name.setdefault(name, []).append((k, p))
     out, taken = {}, set()
-    # pass 1: exact title / old label
+
+    def free(hits):
+        seen, res = set(), []
+        for h in hits:
+            if h[0] not in taken and h[0] not in seen:
+                seen.add(h[0])
+                res.append(h)
+        return res
+
+    # pass 1: exact title / old label / key
     for i, r in enumerate(rows):
         for t in (r.get("title"), r.get("subtitle", "")):
-            hits = [h for h in by_title.get(norm(t), []) if h[0] not in taken]
-            if len(hits) > 1 and r.get("dependency"):
-                hits = sorted(hits, key=lambda h: -dep_score(r, h[1]))[:1] if dep_score(r, max(hits, key=lambda h: dep_score(r, h[1]))[1]) else []
-            if hits:
+            hits = free(by_name.get(norm(t), []))
+            if len(hits) > 1:
+                ranked = sorted(hits, key=lambda h: -dep_score(r, h[1]))
+                hits = ranked[:1] if dep_score(r, ranked[0][1]) > dep_score(r, ranked[1][1]) else []
+            if len(hits) == 1:
                 out[i] = (hits[0], "title")
                 taken.add(hits[0][0])
                 break
-    # pass 2: dependency, then fuzzy title
+    # pass 2: conditional variants by dependency
     for i, r in enumerate(rows):
         if i in out:
             continue
-        free = [(k, p) for k, p in props if k not in taken]
+        cands = [(k, p) for k, p in props if k not in taken]
         if r.get("type") == "geo":
-            locs = [h for h in free if "location" in h[1]]
+            locs = [h for h in cands if "location" in h[1]]
             primary = "primary" in (r.get("map_discovery") or "").lower()
             locs.sort(key=lambda h: (h[1].get("location") == "primary") != primary)
-            if locs:
+            if len(locs) == 1 or (locs and primary):
                 out[i] = (locs[0], "geo")
                 taken.add(locs[0][0])
                 continue
-        best = max(free, key=lambda h: dep_score(r, h[1]), default=None)
-        if best and dep_score(r, best[1]) > 0:
-            out[i] = (best, "dependency")
-            taken.add(best[0])
+        # dependency first, title similarity breaks ties between variants on the same value
+        target = norm(r.get("title"))
+        scored = sorted(((dep_score(r, p), option_overlap(r, p), similarity(target, k, p), (k, p)) for k, p in cands),
+                        key=lambda x: (-x[0], -x[1], -x[2]))
+        if scored and scored[0][0] > 0 and (
+                len(scored) == 1 or scored[0][0] > scored[1][0]
+                or scored[0][1] - scored[1][1] >= 0.2 or scored[0][2] - scored[1][2] >= 0.05):
+            out[i] = (scored[0][3], "dependency")
+            taken.add(scored[0][3][0])
+    # pass 3: fuzzy, only with a clear winner
+    for i, r in enumerate(rows):
+        if i in out:
             continue
-        names = {norm(p.get("title", k)): (k, p) for k, p in free}
-        close = difflib.get_close_matches(norm(r.get("title")), list(names), n=1, cutoff=0.6)
-        if close:
-            out[i] = (names[close[0]], "fuzzy")
-            taken.add(names[close[0]][0])
+        target = norm(r.get("title"))
+        scored = sorted(((similarity(target, k, p), (k, p)) for k, p in props if k not in taken), key=lambda x: -x[0])
+        # a clear winner only: good enough on its own and well ahead of the runner-up
+        if scored and scored[0][0] >= 0.65 and (len(scored) == 1 or scored[0][0] - scored[1][0] >= 0.15):
+            out[i] = (scored[0][1], "fuzzy")
+            taken.add(scored[0][1][0])
     return out
+
+
+def closest(row, props, taken):
+    """Best near-match for a NEW row, as a hint only (never auto-paired)."""
+    target = norm(row.get("title"))
+    best = max(((difflib.SequenceMatcher(None, target, norm(p.get("title", k))).ratio(), k, p)
+                for k, p in props if k not in taken), default=None, key=lambda x: x[0])
+    return best if best and best[0] >= 0.5 else None

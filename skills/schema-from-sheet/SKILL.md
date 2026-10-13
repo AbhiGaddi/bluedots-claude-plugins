@@ -22,16 +22,16 @@ Integrators should get files, not a questionnaire. Do **not** ask questions befo
 
 | Needed | Default (no question) |
 |---|---|
-| Mode | **Create**. Use compare mode only if the user explicitly gives an existing `network.json` to compare with |
+| Mode | **Create**. If a `network.json` for the **same network** already exists (the user mentions one, or the workbook is a later version of a deployed schema), it's an update: run compare first, then **reuse its keys, domain ids, titles and domain settings** and change only what the sheet changes. New keys would orphan every stored profile. Compare-only when the user just wants the differences |
 | Network id / display name | From the user's request if given; else from the workbook name (e.g. `Blue Dots Schema …` → `blue_dot`, "Blue Dot") |
-| Domain per profile sheet | `*Seeker*` → `seeker`, `*JobProvider*` → `provider`, `*ServiceProvider*` → `service_provider`; otherwise snake_case of the sheet name without `_Profile_Schema` |
+| Domain per profile sheet | Existing network's domain ids first (e.g. a Service Provider sheet → `provider` if that's what the network uses). Otherwise `*Seeker*` → `seeker`, `*JobProvider*` → `provider`, `*ServiceProvider*` → `service_provider`, else snake_case of the sheet name |
 | Instance API URL | `http://localhost:2742` (local), noted in decisions |
 | Output folder | `./schema-output/<network>/` |
-| Field keys | camelCase of the title (first line of the cell), unique per schema |
+| Field keys | Existing key when the field already exists (matched by title, description or key). New fields: follow the existing network's key style (snake_case or camelCase); for a brand-new network, camelCase of the short title |
 | "Needs Review" rows | Resolve with the fixed rules (PII wins; no vectorize on numbers, amounts, counts or locations; upload skipped). Otherwise keep the sheet's own values. Note each one in decisions |
 | Options in one cell | Already split by the extractor on `/` or `,`; noted in decisions |
 | Non-literal options ("State-specific trade list", "Dropdown of … colleges", notes) | Free-text field (`"type": "string"`), or `x-reference-source` for a college/institution search; noted in decisions |
-| Filter Field = Yes | Not emitted (only works on Signals builds with schema-driven filters); listed in decisions as "filterable candidates" |
+| Filter Field = Yes | Nothing to write: Signals makes every declared, non-private field filterable. If the field is PII, note that it can never be filtered |
 | Upload fields | Skipped; noted |
 
 Never write outside the output folder. Never copy rows from hidden sheets (they usually hold sample personal data).
@@ -47,7 +47,7 @@ Never write outside the output folder. Never copy rows from hidden sheets (they 
      3. a virtual environment in the output folder: `python3 -m venv <output>/.venv` then `<output>/.venv/bin/pip install openpyxl`, and run the scripts with `<output>/.venv/bin/python` instead of `python3`
    - If all three fail (e.g. a locked-down machine), tell the user installs are blocked and that `openpyxl` is needed.
 
-2. **Extract**:
+2. **Extract** (its summary lists `warnings`: unmapped columns, unrecognised types, Yes/No cells with extra text, unrecognised sheets; carry every one into `decisions.md`):
    ```bash
    python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/extract_sheet.py "<workbook.xlsx>" -o <output>/.spec.json
    ```
@@ -75,27 +75,30 @@ and report `CHANGED` / `NEW` / `ORPHAN` / `SKIP`, then delete `<output>/.spec.js
 | Sheet column | network.json |
 |---|---|
 | **Framework** (WHO I AM / WHAT I HAVE / WHAT I WANT) | `x-form-layout.sections[]` (section title + field order) |
-| **Fields** | `title` (strip trailing `*`). A second line in the cell becomes `description` |
-| **Required** = Yes | key in the schema's `required` array |
-| **Type** `string` / `free text` | `"type": "string"` (`minLength: 1` if required) |
+| **Fields** | Short label as `title` (2–4 words, e.g. "Looking For", "Address"); the sheet's question text goes in `description` ("What are you looking for?"). Reuse an existing field's title. Strip trailing `*` |
+| **Required** = Yes | key in the schema's `required` array (Signals uses `required` as the go-live check; drafts can be saved incomplete) |
+| **Fields required to change profile status to live** (when the sheet has this column) | This column decides `required`. Fields marked only in "Required" are noted in decisions |
+| **Required** + **Depends On** (required only when shown, e.g. CRR Number when category = RCI) | Not in top-level `required`. Add `x-show-if` for the form **and** an `allOf` rule for the API: `{"if": {"properties": {"<parent>": {"const": "<value>"}}, "required": ["<parent>"]}, "then": {"required": ["<child>"]}}` |
+| **Type** `string` / `free text` / `free-text` | `"type": "string"` (`minLength: 1` if required) |
 | **Type** `number` | `integer` for counts/age (with `minimum`/`maximum`); a phone number stays `string` with a `pattern` and `x-error-message` |
 | **Type** `email` | `"type": "string", "format": "email"` |
 | **Type** `url` | `"type": "string", "x-uri": true` |
-| **Type** `dropdown` | `"type": "string", "enum": [...]` |
+| **Type** `dropdown` / `single select` | `"type": "string", "enum": [...]` |
 | **Type** `array selection` / `array` | `"type": "array", "items": {"type": "string", "enum": [...]}, "uniqueItems": true` |
 | **Type** `conditional dropdown` (+ blank-title rows below) | one property per variant, each with its own `enum` and `x-show-if` |
 | **Type** `dropdown with search` | `x-reference-source` (e.g. `{"source": "colleges"}`) instead of an inline enum |
 | **Type** `geo` | `"type": "string", "location": "primary"` for the map pin ("Map Discovery" column), else `"secondary"` |
+| **Type** `geo, array` (several places, e.g. service cities) | `"type": "array", "items": {"type": "string"}`, no `location` marker; noted in decisions |
 | **Type** `upload` | not supported: flag it, don't create a field |
 | Min/Max amount fields | `"type": "number", "minimum": 0` |
-| **Options** | `enum`, split on `;` or newline (single cells split on `/` or `,` by the extractor) |
+| **Options** | `enum`, split on `;` or newline (single cells split on `/` or `,` by the extractor). When updating an existing network, keep each existing enum value's exact spelling: a sheet value that differs only in quotes, case or punctuation ("Parkinson’s" vs "Parkinson's") must not replace it |
 | An option named **Other** | add a companion free-text `<key>Other` with `x-show-if: {<key>: ["Other"]}` |
 | **Dependency** "Shown if X = 'a' or 'b'" | `"x-show-if": {"<xKey>": ["a", "b"]}` |
 | **PII Field** = Yes | `"private": true` |
 | **Unmask event** ("… → Connection Request Accepted") | the interaction's `reveals_pii_on_status`, e.g. `["accepted"]` |
 | **Vectorise** = Yes | `"vectorize": true`; `vector_weight: 2` for the main matching field (e.g. job roles) |
-| **Search Field** = Yes | no marker: text search covers every non-private field, ranked search follows `vectorize` |
-| **Filter Field** = Yes | not emitted by default; listed in `decisions.md` as filterable candidates |
+| **Search Field** = Yes | no marker: text search covers every non-private field, ranked search follows `vectorize`. Extra text in the cell ("Yes (Limited to Area & City)") goes to decisions |
+| **Filter Field** = Yes | no marker (every declared non-private field is filterable). On a PII field: note it can't be filtered |
 | **Displayed on card** = Yes | domain `card.default_fields` |
 | **How it's used / In the bots** | not stored; context only |
 

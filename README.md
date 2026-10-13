@@ -56,4 +56,4 @@ Your workbook stays on your machine. Don't commit workbooks to any repo: their h
 
 ## Status
 
-Early version (0.1.0): extraction, comparison and checks are scripted; file generation is guided by Claude. A deterministic generator is planned.
+Early version (0.2.0): extraction, comparison and checks are scripted; file generation is guided by Claude. A deterministic generator is planned.
