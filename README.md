@@ -9,7 +9,7 @@ Turns a Blue Dots schema workbook (Excel) into the files a Signals deployment re
 - `network.json` (domains, fields, interactions)
 - aggregator registration forms (`org-registration.v1.json`, `registration.v1.json` and their `.ui.json`)
 
-Claude reads the workbook, asks you about every row marked "Needs Review" or otherwise unclear, generates the files, and checks them.
+Claude reads the workbook, generates the files and checks them without a questionnaire: unclear rows are resolved with safe defaults, and every assumption is written to `decisions.md` for you to review.
 
 ### Install
 

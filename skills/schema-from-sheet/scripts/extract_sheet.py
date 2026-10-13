@@ -71,8 +71,17 @@ def split_options(s):
     s = clean(s)
     if not s or s in {"—", "-", "number"}:
         return []
-    parts = re.split(r"[;\n]", s)
-    return [p.strip(" ;") for p in parts if p.strip(" ;")]
+    parts = [p.strip(" ;") for p in re.split(r"[;\n]", s) if p.strip(" ;")]
+    # One cell listing several options ("WFH/ Desk/ On-Field") -> split on "/" or ",".
+    if len(parts) == 1 and re.search(r"[,/]", parts[0]) and len(parts[0]) < 300:
+        split = [x.strip() for x in re.split(r"\s*[,/]\s*", parts[0]) if x.strip()]
+        if len(split) > 1 and all(len(x) < 60 for x in split):
+            seen = []
+            for x in split:
+                if x not in seen:
+                    seen.append(x)
+            return seen
+    return parts
 
 
 def yes(v):

@@ -11,50 +11,54 @@ Converts a programme's schema workbook into the files a Blue Dots (Signals) depl
 - `network.json`: domains, item schemas (fields), interactions
 - aggregator registration forms: `org-registration.v1.json` + `org-registration.v1.ui.json` (organisation / owner) and `registration.v1.json` + `registration.v1.ui.json` (coordinator)
 
-Workbooks are written by people: rows carry review notes ("Needs Review: …"), options sometimes sit in one comma- or slash-separated cell, and conditional sub-fields appear as rows with a blank field name. The scripts extract and check; **you** make the judgement calls and **ask the user** about every ambiguous or "Needs Review" row. Never resolve one silently.
+Workbooks are written by people: rows carry review notes ("Needs Review: …"), options sometimes sit in one comma- or slash-separated cell, and conditional sub-fields appear as rows with a blank field name. The scripts extract and check; you apply the defaults and rules below and **record every judgement call in `decisions.md`** rather than asking.
 
 Scripts live in `${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/`.
 
-## Before starting
+## Don't ask: decide and report
 
-1. Check Python 3 and openpyxl: `python3 -c "import openpyxl"`. If missing: `python3 -m pip install -r ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/requirements.txt`.
-2. Ask which mode:
-   - **Create** (normal): build new files from the workbook.
-   - **Compare**: the user already has a `network.json` and wants to see how the workbook differs. Read-only: report, don't edit.
-3. Ask for what the workbook doesn't hold: network id (e.g. `blue_dot`), display name, domain ids per profile sheet (defaults: `*Seeker*` → `seeker`, `*JobProvider*` → `provider`, `*ServiceProvider*` → `service_provider`), and the output folder (default `./schema-output/<network>/<instance>/`).
-4. Never write outside the output folder the user named. Never copy rows from hidden sheets: they usually hold sample personal data.
+Integrators should get files, not a questionnaire. Do **not** ask questions before or during generation. Apply the defaults below, record every assumption in `<output>/decisions.md`, and finish with a short list of the assumptions the user may want to change. Only stop to ask if the workbook can't be read at all.
+
+| Needed | Default (no question) |
+|---|---|
+| Mode | **Create**. Use compare mode only if the user explicitly gives an existing `network.json` to compare with |
+| Network id / display name | From the user's request if given; else from the workbook name (e.g. `Blue Dots Schema …` → `blue_dot`, "Blue Dot") |
+| Domain per profile sheet | `*Seeker*` → `seeker`, `*JobProvider*` → `provider`, `*ServiceProvider*` → `service_provider`; otherwise snake_case of the sheet name without `_Profile_Schema` |
+| Instance API URL | `http://localhost:2742` (local), noted in decisions |
+| Output folder | `./schema-output/<network>/` |
+| Field keys | camelCase of the title (first line of the cell), unique per schema |
+| "Needs Review" rows | Resolve with the fixed rules (PII wins; no vectorize on numbers, amounts, counts or locations; upload skipped). Otherwise keep the sheet's own values. Note each one in decisions |
+| Options in one cell | Already split by the extractor on `/` or `,`; noted in decisions |
+| Non-literal options ("State-specific trade list", "Dropdown of … colleges", notes) | Free-text field (`"type": "string"`), or `x-reference-source` for a college/institution search; noted in decisions |
+| Filter Field = Yes | Not emitted (only works on Signals builds with schema-driven filters); listed in decisions as "filterable candidates" |
+| Upload fields | Skipped; noted |
+
+Never write outside the output folder. Never copy rows from hidden sheets (they usually hold sample personal data).
 
 ## Steps
 
-1. **Extract** (local, read-only):
+1. **Check Python**: `python3 -c "import openpyxl"`. If missing, install it: `python3 -m pip install -r ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/requirements.txt`.
+
+2. **Extract**:
    ```bash
    python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/extract_sheet.py "<workbook.xlsx>" -o <output>/spec.json
    ```
-   Prints field counts per sheet, interaction blocks and skipped (hidden) sheets. Show the counts to the user and confirm they match the workbook.
 
-2. **List the decisions.** From `spec.json`, collect for the user:
-   - every row with a "Needs Review" note
-   - rule conflicts (e.g. PII + Vectorise, see Fixed rules)
-   - options that need splitting or are not literal options ("State-specific trade list", "Dropdown of colleges")
-   - unsupported types (upload)
-   - field keys: propose camelCase keys from the titles and confirm
-   Ask them in one go, numbered, and wait for answers.
-
-3. **Generate** the files in the output folder using the mapping below. Keep 2-space indentation.
+3. **Generate** `network.json`, `org-registration.v1.json` + `.ui.json`, `registration.v1.json` + `.ui.json` in the output folder using the defaults above and the mapping below. Write `<output>/decisions.md`: one line per assumption (row, field, what was decided, why).
 
 4. **Check**:
    ```bash
    python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/check_schema.py <output>/network.json
    ```
-   Must report 0 problems. Also confirm every aggregator form field appears in its `.ui.json` `ui:order`.
+   Fix anything it reports and re-run until 0 problems. Confirm every aggregator form field is in its `.ui.json` `ui:order`.
 
-5. **Report**: files written, decisions taken, anything still open. Suggest the user loads the files in a local Signals / aggregator setup and opens each profile form and registration form before using them.
+5. **Report** (short): files written, field counts per domain, check result, and the top assumptions from `decisions.md` the user may want to change. The user edits `decisions.md` or replies with corrections; then regenerate.
 
-**Compare mode** replaces steps 2–4 with:
+**Compare mode** (only when the user supplies a `network.json` to compare with): run
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/diff_network.py <output>/spec.json <their-network.json> [SheetName=domain ...]
 ```
-It prints per field: `same`, `CHANGED` (required, private, vectorize, filterable, enum, missing `x-show-if`), `NEW`, `ORPHAN` (in the JSON, no sheet row), `SKIP` (unsupported). A `NEW` + `ORPHAN` pair with a similar title is usually a label rename. Report; don't edit their file.
+and report `CHANGED` / `NEW` / `ORPHAN` / `SKIP`. Read-only: never edit their file.
 
 ## Mapping: profile sheets → `domains[].item_schemas.<type>.properties`
 
@@ -74,18 +78,18 @@ It prints per field: `same`, `CHANGED` (required, private, vectorize, filterable
 | **Type** `geo` | `"type": "string", "location": "primary"` for the map pin ("Map Discovery" column), else `"secondary"` |
 | **Type** `upload` | not supported: flag it, don't create a field |
 | Min/Max amount fields | `"type": "number", "minimum": 0` |
-| **Options** | `enum`, split on `;` or newline; confirm splits of `,` / `/` cells |
+| **Options** | `enum`, split on `;` or newline (single cells split on `/` or `,` by the extractor) |
 | An option named **Other** | add a companion free-text `<key>Other` with `x-show-if: {<key>: ["Other"]}` |
 | **Dependency** "Shown if X = 'a' or 'b'" | `"x-show-if": {"<xKey>": ["a", "b"]}` |
 | **PII Field** = Yes | `"private": true` |
 | **Unmask event** ("… → Connection Request Accepted") | the interaction's `reveals_pii_on_status`, e.g. `["accepted"]` |
 | **Vectorise** = Yes | `"vectorize": true`; `vector_weight: 2` for the main matching field (e.g. job roles) |
 | **Search Field** = Yes | no marker: text search covers every non-private field, ranked search follows `vectorize` |
-| **Filter Field** = Yes | `"filterable": true` only if the user's Signals version supports schema-driven filters; ask |
+| **Filter Field** = Yes | not emitted by default; listed in `decisions.md` as filterable candidates |
 | **Displayed on card** = Yes | domain `card.default_fields` |
 | **How it's used / In the bots** | not stored; context only |
 
-## Fixed rules (apply, don't ask; list them in the report)
+## Fixed rules (apply; list them in decisions.md)
 
 - **PII wins over Vectorise.** A field marked both is `private: true` with no `vectorize`. Private values are stored masked, so there is nothing to embed, and the search indexer would skip every item of that type.
 - Numbers and locations are never vectorized.
