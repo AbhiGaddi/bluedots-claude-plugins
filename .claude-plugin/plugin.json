@@ -6,6 +6,7 @@
     "name": "Abhishek Gaddi"
   },
   "repository": "https://github.com/AbhiGaddi/bluedots-claude-plugins",
+  "license": "MIT",
   "keywords": [
     "blue-dots",
     "schema",
