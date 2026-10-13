@@ -49,7 +49,7 @@ Never write outside the output folder. Never copy rows from hidden sheets (they 
 
 2. **Extract**:
    ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/extract_sheet.py "<workbook.xlsx>" -o <output>/spec.json
+   python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/extract_sheet.py "<workbook.xlsx>" -o <output>/.spec.json
    ```
 
 3. **Generate** `network.json`, `org-registration.v1.json` + `.ui.json`, `registration.v1.json` + `.ui.json` in the output folder using the defaults above and the mapping below. Write `<output>/decisions.md`: one line per assumption (row, field, what was decided, why).
@@ -62,11 +62,13 @@ Never write outside the output folder. Never copy rows from hidden sheets (they 
 
 5. **Report** (short): files written, field counts per domain, check result, and the top assumptions from `decisions.md` the user may want to change. The user edits `decisions.md` or replies with corrections; then regenerate.
 
+6. **Clean up**: delete `<output>/.spec.json` (and `<output>/.venv` if you created one). It's only a working copy of the workbook; the output folder should end with just the schema files and `decisions.md`.
+
 **Compare mode** (only when the user supplies a `network.json` to compare with): run
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/diff_network.py <output>/spec.json <their-network.json> [SheetName=domain ...]
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/diff_network.py <output>/.spec.json <their-network.json> [SheetName=domain ...]
 ```
-and report `CHANGED` / `NEW` / `ORPHAN` / `SKIP`. Read-only: never edit their file.
+and report `CHANGED` / `NEW` / `ORPHAN` / `SKIP`, then delete `<output>/.spec.json`. Read-only: never edit their file.
 
 ## Mapping: profile sheets → `domains[].item_schemas.<type>.properties`
 

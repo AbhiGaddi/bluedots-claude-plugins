@@ -7,6 +7,8 @@
 
 # Generated output and caches
 spec.json
+.spec.json
+.venv/
 schema-output/
 __pycache__/
 *.pyc
