@@ -42,11 +42,7 @@ Not supported yet. The skill runs local Python scripts, which chat can't run rel
 
 **Requirements**
 
-Python 3 with `openpyxl`:
-
-```
-python3 -m pip install openpyxl
-```
+Python **3.9 or newer** (tested on 3.9 and 3.14). Claude checks the version and installs the `openpyxl` library automatically the first time if it's missing. If your machine has no Python 3, install it from [python.org](https://www.python.org/downloads/).
 
 ### Use
 

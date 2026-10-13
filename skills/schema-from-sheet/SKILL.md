@@ -2,6 +2,7 @@
 name: schema-from-sheet
 description: Turn a Blue Dots schema workbook (Excel) into a network.json and the aggregator registration form schemas. Use when the user gives a schema .xlsx (profile sheets per domain, aggregator owner/coordinator sheets, interaction rules) and wants the Blue Dots / Signals schema files created, or wants to compare the workbook with a network.json they already have.
 allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/*.py *)
+compatibility: Requires Python 3.9 or newer (tested on 3.9 and 3.14) and the openpyxl package (3.1+), installed automatically if missing.
 ---
 
 # Schema from sheet
@@ -37,7 +38,14 @@ Never write outside the output folder. Never copy rows from hidden sheets (they 
 
 ## Steps
 
-1. **Check Python**: `python3 -c "import openpyxl"`. If missing, install it: `python3 -m pip install -r ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/requirements.txt`.
+1. **Check Python** (do this yourself; don't ask the user):
+   - `python3 --version` must be **3.9 or newer** (tested on 3.9 and 3.14). On Windows try `py -3 --version` and use `py -3` instead of `python3` below.
+   - No Python 3, or older than 3.9: stop and tell the user to install Python 3.9+ from python.org (or their package manager). Don't install system software yourself.
+   - `python3 -c "import openpyxl"`. If missing, install it, trying in order until one works:
+     1. `python3 -m pip install -r ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/requirements.txt`
+     2. same with `--user` (for "externally-managed-environment" errors on newer macOS/Linux)
+     3. a virtual environment in the output folder: `python3 -m venv <output>/.venv` then `<output>/.venv/bin/pip install openpyxl`, and run the scripts with `<output>/.venv/bin/python` instead of `python3`
+   - If all three fail (e.g. a locked-down machine), tell the user installs are blocked and that `openpyxl` is needed.
 
 2. **Extract**:
    ```bash
