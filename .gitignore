@@ -13,3 +13,6 @@ schema-output/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Built skill zips (attached to GitHub releases, not committed)
+dist/

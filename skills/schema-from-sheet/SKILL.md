@@ -1,7 +1,7 @@
 ---
 name: schema-from-sheet
 description: Turn a Blue Dots schema workbook (Excel) into a network.json and the aggregator registration form schemas. Use when the user gives a schema .xlsx (profile sheets per domain, aggregator owner/coordinator sheets, interaction rules) and wants the Blue Dots / Signals schema files created or updated, or wants to compare the workbook with a network.json they already have.
-allowed-tools: Bash(python3 ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/*.py *)
+allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/*.py *)
 compatibility: Requires Python 3.9 or newer (tested on 3.9 and 3.14) and the openpyxl package (3.1+), installed automatically if missing.
 ---
 
@@ -14,7 +14,7 @@ Turns a programme's schema workbook into the files a Blue Dots (Signals) deploym
 
 **The files are written by scripts, never by hand.** `build.py` combines the workbook (`.spec.json`), the human choices (`decisions.json`) and the reference templates in `references/` (structure taken from a deployed network), so the output always has the structure Signals and the aggregator portal read, and the same inputs always give the same files. Your job is to fill in `decisions.json`, not to write JSON schemas.
 
-Scripts: `${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/scripts/` (written `$S` below).
+Scripts: `${CLAUDE_SKILL_DIR}/scripts/` (written `$S` below). If that path still shows a `${...}` placeholder, use the `scripts/` folder next to this SKILL.md.
 
 ## Don't ask: decide and report
 
@@ -24,7 +24,7 @@ Integrators should get files, not a questionnaire. Don't ask questions; resolve 
 
 1. **Check Python** (yourself, no questions):
    - `python3 --version` must be **3.9+** (Windows: `py -3`). Missing or older: tell the user to install Python 3.9+ from python.org; don't install system software.
-   - `python3 -c "import openpyxl"`. If missing, try in order: `python3 -m pip install -r ${CLAUDE_PLUGIN_ROOT}/skills/schema-from-sheet/requirements.txt`, the same with `--user`, then a venv in the output folder (`python3 -m venv <out>/.venv`, run the scripts with `<out>/.venv/bin/python`). If all fail, say installs are blocked.
+   - `python3 -c "import openpyxl"`. If missing, try in order: `python3 -m pip install -r ${CLAUDE_SKILL_DIR}/requirements.txt`, the same with `--user`, then a venv in the output folder (`python3 -m venv <out>/.venv`, run the scripts with `<out>/.venv/bin/python`). If all fail, say installs are blocked.
 
 2. **Extract**:
    ```bash

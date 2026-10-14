@@ -36,6 +36,14 @@ Run Claude in the IDE terminal and use the same two `/plugin` commands as the te
 
 Click **+** next to the prompt → **Plugins → Add plugin** → choose **bluedots-schema-tools**. If the marketplace isn't listed, add it once from the terminal or VS Code (steps above). Not available in cloud or WSL sessions.
 
+**From a zip (without the marketplace)**
+
+1. Download `schema-from-sheet-v<version>.zip` from the [latest release](https://github.com/AbhiGaddi/bluedots-claude-plugins/releases/latest).
+2. Unzip it into `~/.claude/skills/` (all your projects) or `<project>/.claude/skills/` (one project), so you get `~/.claude/skills/schema-from-sheet/SKILL.md`.
+3. Restart Claude Code. The skill is then available as `/schema-from-sheet`.
+
+To update, delete the `schema-from-sheet` folder and unzip the newer release. Don't install both the plugin and the zip; you would get the skill twice.
+
 **Claude Desktop chat / claude.ai**
 
 Not supported yet. The skill runs local Python scripts, which chat can't run reliably today. Use one of the Claude Code options above.
@@ -52,16 +60,19 @@ Your workbook stays on your machine. Don't commit workbooks to any repo: their h
 
 ### Updates
 
-`/plugin marketplace update bluedots-claude-plugins`
+`/plugin marketplace update bluedots-claude-plugins` (plugin). For the zip, see "From a zip" above.
 
 ## Accuracy
 
-`skills/schema-from-sheet/tests/run_golden.py` rebuilds the Purple Dots (ALIMCO) schema from its Oct 2026 workbook. All five files (`network.json` and the four aggregator forms) must match the deployed reference exactly, and a brand-new network built from the same workbook must pass the structural check (`check_schema.py`, mirroring what Signals and the aggregator portal read). Run it before every release:
+`skills/schema-from-sheet/tests/run_golden.py` rebuilds the Purple Dots (ALIMCO) schema from its Oct 2026 workbook. All five files (`network.json` and the four aggregator forms) must match the deployed reference exactly, and a brand-new network built from the same workbook must pass the structural check (`check_schema.py`, mirroring what Signals and the aggregator portal read). Run it before every release, together with the packaging test, which builds the zip and checks it works on its own:
 
 ```
 python3 skills/schema-from-sheet/tests/run_golden.py
+python3 tests/test_package.py
 ```
+
+The release zip is built with `python3 tools/package_skill.py` (output: `dist/schema-from-sheet-v<version>.zip`) and attached to the GitHub release.
 
 ## Status
 
-Version 0.3.0: files are built by a script (`build.py`) from the workbook, a `decisions.json` and reference templates, so the same inputs always give the same, valid files.
+Version 0.3.1: the skill also ships as a standalone zip. Files are built by a script (`build.py`) from the workbook, a `decisions.json` and reference templates, so the same inputs always give the same, valid files.
