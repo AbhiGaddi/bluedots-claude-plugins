@@ -75,4 +75,4 @@ The release zip is built with `python3 tools/package_skill.py` (output: `dist/sc
 
 ## Status
 
-Version 0.3.1: the skill also ships as a standalone zip. Files are built by a script (`build.py`) from the workbook, a `decisions.json` and reference templates, so the same inputs always give the same, valid files.
+Version 0.3.2: fixes found on the Blue Dots Aug 2026 workbook. Every field gets a title in create mode, show-if conditions find the right parent field and values (including conditions joined by "and"), Service Provider interactions map to the right domain, repeated options are dropped, and `check_schema.py` catches each of these. The skill also ships as a standalone zip; files are built by a script (`build.py`) from the workbook, a `decisions.json` and reference templates, so the same inputs always give the same, valid files.

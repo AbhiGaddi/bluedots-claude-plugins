@@ -48,7 +48,7 @@ Integrators should get files, not a questionnaire. Don't ask questions; resolve 
    - network: `id`, `display_name`, `description`, `instance_url` / `instances`
    - forms: `forms` (a JSON merge patch per form file, e.g. option labels) or `forms_full`
 
-   Defaults when unsure: keep the existing value; for a new network keep what the rules produced. Pairings "matched by elimination / fuzzy" are usually right; confirm by reading both titles. Note each resolution in `decisions.md` (one line: row, field, decision, why).
+   Defaults when unsure: keep the existing value; for a new network keep what the rules produced. Pairings "matched by elimination / fuzzy" are usually right; confirm by reading both titles. Proposed short titles for long questions are rough: rewrite them as a person would label the field ("Monthly Salary Min (INR)", "Services Offered"). Conditional variants get their condition in the title ("Qualification Details (College)"); keep or shorten it, but keep them distinct. Note each resolution in `decisions.md` (one line: row, field, decision, why).
 
 5. **Build**:
    ```bash
@@ -59,7 +59,13 @@ Integrators should get files, not a questionnaire. Don't ask questions; resolve 
    ```bash
    python3 $S/check_schema.py <out>/network.json <out>
    ```
-   It mirrors Signals' network config validation and the portal's form keys, plus: no private+vectorize field, no dangling `x-show-if` / `allOf` / card / layout references, `enum`/`enumNames` lengths, a primary map location per domain.
+   It mirrors Signals' network config validation and the portal's form keys, plus: no private+vectorize field, no dangling `x-show-if` / `allOf` / card / layout references, `x-show-if` only on fields with options and only with their values, `enum`/`enumNames` lengths, no repeated options, a title on every field, a primary map location per domain, an interaction for every domain.
+
+   Then compare the result with the workbook, row by row:
+   ```bash
+   python3 $S/diff_network.py <out>/.spec.json <out>/network.json
+   ```
+   Every row should be `same`, or differ only for a reason in `decisions.md` (a short title, a private field the sheet marks as a filter, a number or location the sheet marks for matching, the sheet's own review notes). Anything else is a decision to fix.
 
 7. **Report** (short): files written, field counts per domain, check result, top assumptions from `decisions.md`.
 
@@ -74,7 +80,8 @@ Integrators should get files, not a questionnaire. Don't ask questions; resolve 
 | Fields | `title`; a question goes in `description` with a short `title` (decisions) |
 | Required = Yes | in `required`; strings get `minLength: 1`, arrays `minItems: 1` |
 | Required + Depends On | not in `required`; `x-show-if` plus an `allOf` if/then rule |
-| Depends On ("visible only if category is RCI", "X = a") | `x-show-if: {<parent key>: [<value>]}` |
+| Depends On ("visible only if category is RCI", "X = a") | `x-show-if: {<parent key>: [<value>]}`: the parent is the field whose options contain the values; values split on `,` `;` `/` `or` |
+| Depends On with "and" ("Type = Educational and Who can contact = Job Seekers") | one `x-show-if` entry per condition; Signals shows the field only when all match |
 | Type string / free text | `"type": "string"` |
 | number (phone / mobile in the title) | `"type": "string", "pattern": "^[0-9]{10}$"` |
 | number (other) | `"type": "integer"` |
@@ -93,4 +100,4 @@ Integrators should get files, not a questionnaire. Don't ask questions; resolve 
 
 ## Accuracy
 
-`tests/run_golden.py` rebuilds the Purple Dots (ALIMCO) schema from its Oct 2026 workbook and must match the deployed reference exactly (5/5 files); create mode must pass `check_schema.py`. Run it after any change to the scripts.
+`tests/run_golden.py` rebuilds the Purple Dots (ALIMCO) schema from its Oct 2026 workbook and must match the deployed reference exactly (5/5 files), and builds the Blue Dots Aug 2026 workbook in create mode, which must match its expected files (titles, conditions, interactions). All outputs must pass `check_schema.py`. Run it after any change to the scripts.

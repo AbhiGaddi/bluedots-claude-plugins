@@ -24,7 +24,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from build import kind, rule_property, rows_of  # noqa: E402
+from build import dependency_clauses, kind, match_values, rule_property, rows_of  # noqa: E402
 from match import match_all, norm  # noqa: E402
 
 DEFAULT_MAP = [("seeker", "seeker"), ("jobprovider", "provider"), ("serviceprovider", "service_provider")]
@@ -42,6 +42,25 @@ def make_key(title, style, taken):
         key, i = f"{base}{'_' if style == 'snake' else ''}{i}", i + 1
     taken.add(key)
     return key
+
+
+def short_title(question):
+    stop = {"what", "is", "your", "the", "a", "an", "do", "you", "which", "of", "to", "for", "in", "are", "please",
+            "share", "select", "that", "applies", "where", "can", "how"}
+    words = re.findall(r"[A-Za-z0-9%][A-Za-z0-9%'-]*", question)
+    title = " ".join(w if w.isupper() else w[0].upper() + w[1:] for w in words if w.lower() not in stop)
+    if len(title) > 40:
+        title = title[:41].rsplit(" ", 1)[0]
+    return title or question
+
+
+def condition_label(dependency):
+    """"if highest qualification = ITI / Other Vocational Training" -> "ITI / Other Vocational Training"."""
+    parts = []
+    for _, text in dependency_clauses(dependency):
+        vals, _ = match_values(text, [])
+        parts.append(" / ".join(vals))
+    return ", ".join(p for p in parts if p) or "conditional"
 
 
 def domain_id(sheet, existing_ids):
@@ -176,19 +195,21 @@ def main():
             dd["settings"] = {k: v for k, v in exd.items() if k not in ("item_schemas", "id", "card", "contact_fields")}
             dd["domain_key_order"] = list(exd)
         else:
+            repeated = {t for t in (r["title"] for r in rows) if [x["title"] for x in rows].count(t) > 1}
             for r in rows:
                 if kind(r) == "upload":
                     dd["fields"].append({"row": r["row"], "skip": True})
                     todo.append(f"{prof['sheet']} R{r['row']} '{r['title']}': upload not supported, skipped")
                     continue
                 key = make_key(r["title"], style, taken)
-                f = {"row": r["row"], "key": key}
-                if len(r["title"].split()) > 4 or r["title"].endswith("?"):
+                f = {"row": r["row"], "key": key, "title": r["title"]}
+                if len(r["title"]) > 40 or r["title"].endswith("?"):
                     f["description"] = r["title"]
-                    f["title"] = " ".join(w.title() for w in re.findall(r"[A-Za-z0-9%]+", r["title"]) if w.lower() not in
-                                          {"what", "is", "your", "the", "a", "an", "do", "you", "which", "of", "to", "for", "in",
-                                           "are", "please", "share", "select", "that", "applies", "where", "can", "how"})[:40].strip() or r["title"]
+                    f["title"] = short_title(r["title"])
                     todo.append(f"{prof['sheet']} R{r['row']}: short title '{f['title']}' proposed for the question; adjust")
+                if r["title"] in repeated and r.get("dependency"):
+                    # Conditional variants share the sheet title; tell them apart by their condition.
+                    f["title"] = f"{f['title']} ({condition_label(r['dependency'])})"
                 dd["fields"].append(f)
             todo.append(f"{did}: card, layout and contact fields use defaults; review")
         dec["domains"].append(dd)

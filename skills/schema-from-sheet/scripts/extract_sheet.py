@@ -124,7 +124,8 @@ def unmapped(header, cols):
     return out
 
 
-def split_options(s):
+def options_listed(s):
+    """Every option in the cell, in order, repeats included."""
     s = clean(s)
     if not s or s in {"—", "-", "number"}:
         return []
@@ -133,12 +134,17 @@ def split_options(s):
     if len(parts) == 1 and re.search(r"[,/]", parts[0]) and len(parts[0]) < 300:
         split = [x.strip() for x in re.split(r"\s*[,/]\s*", parts[0]) if x.strip()]
         if len(split) > 1 and all(len(x) < 60 for x in split):
-            seen = []
-            for x in split:
-                if x not in seen:
-                    seen.append(x)
-            return seen
+            parts = split
     return parts
+
+
+def split_options(s):
+    return list(dict.fromkeys(options_listed(s)))
+
+
+def repeated_options(s):
+    listed = options_listed(s)
+    return [x for x in dict.fromkeys(listed) if listed.count(x) > 1]
 
 
 def yes_value(v):
@@ -218,6 +224,8 @@ def profile_sheet(ws, warnings):
             warnings.append(f"{ws.title} R{i}: type not recognised: \"{entry['type']}\"")
         for k, extra in notes.items():
             warnings.append(f"{ws.title} R{i}: {k} cell has extra text: \"{extra}\"")
+        for x in repeated_options(get(r, "options")):
+            warnings.append(f"{ws.title} R{i}: option listed more than once, kept once: \"{x}\"")
         if not raw_title and fields:
             # Blank title: a conditional variant of the field above (e.g. per-qualification sub-dropdowns).
             fields[-1].setdefault("variants", []).append(entry)

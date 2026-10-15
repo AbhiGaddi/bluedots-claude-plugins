@@ -126,25 +126,71 @@ def ordered(p, order):
     return out
 
 
-def find_parent(row, fields):
-    """Parent field + values for a dependency like "visible only if category chosen is RCI"."""
-    dep = row.get("dependency") or ""
-    m = re.search(r"(?:if|when)\s+(.+?)\s*(?:=|\bchosen is\b|\bselected is\b|\bis\b)\s*(.+)$", dep, re.I | re.S)
+OPERATOR = r"\s*(?:=|\bchosen is\b|\bselected is\b|\bis\b)\s*"
+QUOTES = " .'\"‘’“”"
+
+
+def dependency_clauses(dep):
+    """"Shown if X = 'a' or 'b' and Y = c" -> [("X", "'a' or 'b'"), ("Y", "c")]."""
+    m = re.search(r"\b(?:if|when)\b\s*(.+)$", dep or "", re.I | re.S)
     if not m:
-        return None, []
-    words = [w for w in re.findall(r"[a-z]+", m.group(1).lower()) if w not in ("the", "made", "visible", "only", "should", "be")]
-    best, score = None, 0
-    for key, prop, src in fields:
-        hay = " ".join([key.replace("_", " "), prop.get("title", ""), prop.get("description", ""), src.get("title", "")]).lower()
-        s = sum(1 for w in words if w in hay)
-        if s > score:
-            best, score = (key, prop), s
-    if not best:
-        return None, []
-    enum = best[1].get("enum") or (best[1].get("items") or {}).get("enum") or []
-    vals = [v for v in re.split(r"\s*(?:,|/|\bor\b)\s*", m.group(2).strip(" .'\"")) if v]
-    vals = [next((e for e in enum if e.lower() == v.lower()), v) for v in vals]
-    return best[0], vals
+        return []
+    clauses = []
+    for part in re.split(r"\s+and\s+", m.group(1), flags=re.I):
+        if re.search(OPERATOR, part, re.I) or not clauses:
+            clauses.append(part)
+        else:
+            clauses[-1] += " and " + part  # an "and" inside a value, not between conditions
+    out = []
+    for c in clauses:
+        mm = re.match(r"(.+?)" + OPERATOR + r"(.+)$", c.strip(), re.I | re.S)
+        if mm:
+            out.append((mm.group(1), mm.group(2)))
+    return out
+
+
+def options_of(prop):
+    return prop.get("enum") or (prop.get("items") or {}).get("enum") or []
+
+
+def match_values(text, enum):
+    """Values named in a condition, mapped onto the parent's options. -> (values, how many matched an option)."""
+    lower = {e.lower(): e for e in enum}
+    vals, hits = [], 0
+    for piece in re.split(r"\s*(?:,|;|\bor\b)\s*", text, flags=re.I):
+        piece = " ".join(piece.strip(QUOTES).split())
+        if not piece:
+            continue
+        if piece.lower() in lower:
+            vals.append(lower[piece.lower()])
+            hits += 1
+            continue
+        for part in re.split(r"\s*/\s*", piece):
+            part = part.strip(QUOTES)
+            if part:
+                hits += part.lower() in lower
+                vals.append(lower.get(part.lower(), part))
+    return list(dict.fromkeys(vals)), hits
+
+
+def find_condition(row, fields):
+    """x-show-if for a dependency like "visible only if category chosen is RCI" (several clauses joined by "and")."""
+    stop = ("the", "made", "visible", "only", "should", "be", "shown", "of", "is")
+    show = {}
+    for name, value_text in dependency_clauses(row.get("dependency")):
+        words = [w for w in re.findall(r"[a-z]+", name.lower()) if w not in stop]
+        best, best_rank = None, (0, 0)
+        for key, prop, src in fields:
+            hay = " ".join([key.replace("_", " "), prop.get("title", ""), prop.get("description", ""), src.get("title", "")]).lower()
+            score = sum(1 for w in words if w in hay)
+            vals, hits = match_values(value_text, options_of(prop))
+            # A parent whose options contain the values beats one that only shares words with the name.
+            rank = (hits, score)
+            if (hits or score) and rank > best_rank:
+                best, best_rank = (key, vals), rank
+        if best and best[1]:
+            show[best[0]] = best[1]
+    return show
 
 
 def build_domain(prof, dd, tpl, network_id):
@@ -179,9 +225,9 @@ def build_domain(prof, dd, tpl, network_id):
     for key, row in [(k, sources[k]) for k in props if sources[k] and sources[k].get("dependency")]:
         if "x-show-if" in props[key] or by_row.get(row["row"], {}).get("no_condition"):
             continue
-        parent, vals = find_parent(row, [f for f in fields if f[0] != key])
-        if parent and vals:
-            props[key]["x-show-if"] = {parent: vals}
+        show = find_condition(row, [f for f in fields if f[0] != key])
+        if show:
+            props[key]["x-show-if"] = show
     for key, row in conditional:
         show = props[key].get("x-show-if") or {}
         if len(show) == 1:
@@ -258,11 +304,10 @@ def build_actions(spec, dec, tpl, domains):
     def dom(name):
         if name in alias:
             return alias[name]
-        low = name.lower()
-        for d in domains:
-            if d["id"].replace("_", " ") in low or low.rstrip("s") in d["id"].replace("_", " "):
-                return d["id"]
-        return low.replace(" ", "_")
+        flat = re.sub(r"[^a-z]", "", name.lower()).rstrip("s")
+        # Longest id first, so "Service Provider" is service_provider and not provider.
+        hits = [d["id"] for d in domains if d["id"].replace("_", "") in flat or flat in d["id"].replace("_", "")]
+        return max(hits, key=len) if hits else name.lower().replace(" ", "_")
     interactions = []
     for block in spec.get("interactions", []):
         frm, to = dom(block["from"]), dom(block["to"])

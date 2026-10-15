@@ -7,7 +7,9 @@ Exit 1 on any problem. network.json checks mirror Signals' network config
 validation (top level, domains, item schemas, actions/interactions, instances)
 plus the rules Signals doesn't enforce at boot but that break things later
 (private + vectorize, dangling x-show-if / allOf / card / layout references,
-enum/enumNames length, no primary map location). Form checks require the keys
+x-show-if on a field with no options, enum/enumNames length, repeated options,
+fields with no title, no primary map location, a domain no interaction reaches).
+Form checks require the keys
 the aggregator portal's code reads, and that every field is placed in its
 .ui.json ui:order.
 """
@@ -58,14 +60,21 @@ def check_network(net, problems):
                     p(f"{w}: private and vectorize (PII must not be vectorized)")
                 if "reveals_pii_on_status" in prop:
                     p(f"{w}: reveals_pii_on_status belongs on the interaction, not on a field")
+                if not prop.get("title"):
+                    p(f"{w}: no title (the form would show the raw key)")
                 enum, names = prop.get("enum"), prop.get("enumNames")
                 if enum is not None and names is not None and len(enum) != len(names):
                     p(f"{w}: enum has {len(enum)} values but enumNames has {len(names)}")
+                options = enum or (prop.get("items") or {}).get("enum") or []
+                for v in {v for v in options if options.count(v) > 1}:
+                    p(f"{w}: option '{v}' is listed more than once")
                 for dep, vals in (prop.get("x-show-if") or {}).items():
                     if dep not in props:
                         p(f"{w}: x-show-if refers to unknown field '{dep}'")
                         continue
                     allowed = props[dep].get("enum") or (props[dep].get("items") or {}).get("enum")
+                    if not allowed:
+                        p(f"{w}: x-show-if depends on '{dep}', which has no options to choose from")
                     for v in vals if isinstance(vals, list) else [vals]:
                         if allowed and v not in allowed:
                             p(f"{w}: x-show-if value '{v}' is not an option of '{dep}'")
@@ -94,6 +103,10 @@ def check_network(net, problems):
             p(f"instances: domain_id '{inst.get('domain_id')}' is not a domain")
         if not inst.get("instance_url"):
             p("instances: missing instance_url")
+    linked = {it.get(k) for a in (net.get("actions") or {}).values() if isinstance(a, dict)
+              for it in a.get("interactions", []) for k in ("from_domain", "to_domain")}
+    for did in sorted(ids - linked):
+        p(f"{did}: no interaction from or to this domain (nobody can connect with it)")
     for name, action in (net.get("actions") or {}).items() if isinstance(net.get("actions"), dict) else []:
         for i, it in enumerate(action.get("interactions", [])):
             w = f"actions.{name}[{i}]"
