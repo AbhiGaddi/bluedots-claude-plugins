@@ -1,78 +1,74 @@
 # bluedots-claude-plugins
 
-Claude Code plugins for Blue Dots integrators.
+Tools for Claude Code that help you set up a Blue Dots network.
 
-## bluedots-schema-tools
+## What it does
 
-Turns a Blue Dots schema workbook (Excel) into the files a Signals deployment reads:
+You describe your network in an Excel workbook: who uses it (for example job seekers and job providers), what each of them fills in, and who can connect with whom.
 
-- `network.json` (domains, fields, interactions)
-- aggregator registration forms (`org-registration.v1.json`, `registration.v1.json` and their `.ui.json`)
+This tool reads that workbook and creates the files Blue Dots needs:
 
-Claude reads the workbook, drafts the decisions (keys, short titles, anything the sheet leaves open), builds the files with a script and checks them: no questionnaire, and every assumption is written to `decisions.md` for you to review.
+- **`network.json`**: the profile form for each type of user, and who can connect with whom
+- **four registration form files**: the sign-up forms for organisations and their coordinators
 
-### Install
+You don't need to write any JSON. Claude reads the workbook, makes the small decisions the sheet leaves open (such as short labels for long questions), builds the files and checks them. Every decision it made is listed in `decisions.md` so you can review it.
 
-Works wherever Claude Code runs. Install once per machine; a plugin installed in one place (for example the terminal) shows up in the others.
+## What you need
 
-**Terminal (Claude Code CLI)**
+- **Claude Code**: in the terminal, VS Code, a JetBrains IDE, or the Code tab of Claude Desktop
+- **Python 3.9 or newer**: if you don't have it, get it from [python.org](https://www.python.org/downloads/). Claude installs anything else it needs.
+
+## Install
+
+Pick **one** of these.
+
+**Option 1: as a plugin (recommended)**
+
+In Claude Code, type:
 
 ```
 /plugin marketplace add AbhiGaddi/bluedots-claude-plugins
 /plugin install bluedots-schema-tools@bluedots-claude-plugins
 ```
 
-**VS Code (Claude Code extension)**
+In VS Code you can also do this from the menu: type `/plugins`, add `AbhiGaddi/bluedots-claude-plugins` under **Marketplaces**, then install **bluedots-schema-tools** under **Plugins**.
 
-1. In the Claude panel, type `/plugins` to open **Manage plugins**.
-2. **Marketplaces** tab → add `AbhiGaddi/bluedots-claude-plugins`.
-3. **Plugins** tab → install **bluedots-schema-tools**.
+**Option 2: from a zip file**
 
-**JetBrains IDEs**
+1. Download the zip from the [latest release](https://github.com/AbhiGaddi/bluedots-claude-plugins/releases/latest).
+2. Unzip it into the `.claude/skills/` folder in your home folder.
+3. Restart Claude Code.
 
-Run Claude in the IDE terminal and use the same two `/plugin` commands as the terminal.
+## Use
 
-**Claude Desktop: Code tab (local sessions)**
+Ask Claude in plain words, for example:
 
-Click **+** next to the prompt → **Plugins → Add plugin** → choose **bluedots-schema-tools**. If the marketplace isn't listed, add it once from the terminal or VS Code (steps above). Not available in cloud or WSL sessions.
+> Convert `my-schema.xlsx` into network.json and the aggregator forms
 
-**From a zip (without the marketplace)**
+You get a folder with the five files, plus `decisions.md` (what Claude decided and why) and `decisions.json` (lets you rebuild the files after you change the workbook).
 
-1. Download `schema-from-sheet-v<version>.zip` from the [latest release](https://github.com/AbhiGaddi/bluedots-claude-plugins/releases/latest).
-2. Unzip it into `~/.claude/skills/` (all your projects) or `<project>/.claude/skills/` (one project), so you get `~/.claude/skills/schema-from-sheet/SKILL.md`.
-3. Restart Claude Code. The skill is then available as `/schema-from-sheet`.
+**Keep your workbook private.** Don't upload it to GitHub or any shared folder: workbooks often have hidden sheets with real people's details.
 
-To update, delete the `schema-from-sheet` folder and unzip the newer release. Don't install both the plugin and the zip; you would get the skill twice.
+## Update
 
-**Claude Desktop chat / claude.ai**
+- **Plugin:** type `/plugin marketplace update bluedots-claude-plugins`, then `/reload-plugins`.
+- **Zip:** delete the old `schema-from-sheet` folder and unzip the new release.
 
-Not supported yet. The skill runs local Python scripts, which chat can't run reliably today. Use one of the Claude Code options above.
+## Not supported yet
 
-**Requirements**
+Claude Desktop chat and claude.ai. The tool runs small Python scripts on your computer, which only Claude Code can do.
 
-Python **3.9 or newer** (tested on 3.9 and 3.14). Claude checks the version and installs the `openpyxl` library automatically the first time if it's missing. If your machine has no Python 3, install it from [python.org](https://www.python.org/downloads/).
+---
 
-### Use
+## For developers
 
-Ask Claude, for example: "Convert `my-schema.xlsx` into network.json and the aggregator forms", or run `/bluedots-schema-tools:schema-from-sheet`.
-
-Your workbook stays on your machine. Don't commit workbooks to any repo: their hidden sheets often contain sample personal data.
-
-### Updates
-
-`/plugin marketplace update bluedots-claude-plugins` (plugin). For the zip, see "From a zip" above.
-
-## Accuracy
-
-`skills/schema-from-sheet/tests/run_golden.py` rebuilds the Purple Dots (ALIMCO) schema from its Oct 2026 workbook. All five files (`network.json` and the four aggregator forms) must match the deployed reference exactly, and a brand-new network built from the same workbook must pass the structural check (`check_schema.py`, mirroring what Signals and the aggregator portal read). Run it before every release, together with the packaging test, which builds the zip and checks it works on its own:
+The files are built by scripts in `skills/schema-from-sheet/scripts/`, so the same workbook always gives the same files. Before a release, run:
 
 ```
 python3 skills/schema-from-sheet/tests/run_golden.py
 python3 tests/test_package.py
 ```
 
-The release zip is built with `python3 tools/package_skill.py` (output: `dist/schema-from-sheet-v<version>.zip`) and attached to the GitHub release.
+The first rebuilds two real networks, Purple Dots (ALIMCO) and Blue Dots, from their workbooks and checks every file matches. The second builds the zip (`python3 tools/package_skill.py` makes it for the release) and checks it works on its own.
 
-## Status
-
-Version 0.3.2: fixes found on the Blue Dots Aug 2026 workbook. Every field gets a title in create mode, show-if conditions find the right parent field and values (including conditions joined by "and"), Service Provider interactions map to the right domain, repeated options are dropped, and `check_schema.py` catches each of these. The skill also ships as a standalone zip; files are built by a script (`build.py`) from the workbook, a `decisions.json` and reference templates, so the same inputs always give the same, valid files.
+Current version: **0.3.2**. See [releases](https://github.com/AbhiGaddi/bluedots-claude-plugins/releases) for what changed.
