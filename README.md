@@ -9,7 +9,9 @@ You describe your network in an Excel workbook: who uses it (for example job see
 This tool reads that workbook and creates the files Blue Dots needs:
 
 - **`network.json`**: the profile form for each type of user, and who can connect with whom
-- **four registration form files**: the sign-up forms for organisations and their coordinators
+- **four registration form files**: the sign-up forms for organisations and their coordinators, built from the workbook's Aggregator Owner and Coordinator sheets
+- **`aggregator.config.yaml`**: the aggregator portal's config for the network (who the login person is in each domain, and the domain names shown in the portal)
+- **`deployments.env`**: if the workbook lists deployments (Domains sheet), the settings each one needs: which domains it serves and the app links
 
 You don't need to write any JSON. Claude reads the workbook, makes the small decisions the sheet leaves open (such as short labels for long questions), builds the files and checks them. Every decision it made is listed in `decisions.md` so you can review it.
 
@@ -45,7 +47,7 @@ Ask Claude in plain words, for example:
 
 > Convert `my-schema.xlsx` into network.json and the aggregator forms
 
-You get a folder with the five files, plus `decisions.md` (what Claude decided and why) and `decisions.json` (lets you rebuild the files after you change the workbook).
+You get a folder with these files, plus `decisions.md` (what Claude decided and why) and `decisions.json` (lets you rebuild the files after you change the workbook).
 
 **Keep your workbook private.** Don't upload it to GitHub or any shared folder: workbooks often have hidden sheets with real people's details.
 
@@ -71,4 +73,4 @@ python3 tests/test_package.py
 
 The first rebuilds two real networks, Purple Dots (ALIMCO) and Blue Dots, from their workbooks and checks every file matches. The second builds the zip (`python3 tools/package_skill.py` makes it for the release) and checks it works on its own.
 
-Current version: **0.3.2**. See [releases](https://github.com/AbhiGaddi/bluedots-claude-plugins/releases) for what changed.
+Current version: **0.3.3**. See [releases](https://github.com/AbhiGaddi/bluedots-claude-plugins/releases) for what changed.

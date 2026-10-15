@@ -27,7 +27,8 @@
       "title": "Aggregator Type",
       "enum": [
         "seeker",
-        "provider"
+        "provider",
+        "service_provider"
       ]
     },
     "sub_org_name": {

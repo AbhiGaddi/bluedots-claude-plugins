@@ -17,6 +17,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from forms import aggregator_config, build_forms, deployments_env, domain_for, load_refs, page_labels  # noqa: E402
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 REFS = os.path.join(HERE, "..", "references")
 PHONE = re.compile(r"\b(phone|mobile|contact number|whatsapp)\b", re.I)
@@ -193,7 +196,7 @@ def find_condition(row, fields):
     return show
 
 
-def build_domain(prof, dd, tpl, network_id):
+def build_domain(prof, dd, tpl, network_id, page_label=None):
     rows = rows_of(prof)
     by_row = {d["row"]: d for d in dd.get("fields", [])}
     props, sources, required, conditional = {}, {}, [], []
@@ -256,6 +259,8 @@ def build_domain(prof, dd, tpl, network_id):
     schema["properties"] = {k: ordered(v, dd.get("property_key_order", [])) for k, v in props.items()}
     domain = {}
     settings = copy.deepcopy(tpl["domain_defaults"])
+    if page_label:
+        settings["my_items_label"] = page_label
     settings.update(copy.deepcopy(dd.get("settings") or {}))
     for k, v in settings.items():
         domain[k] = v
@@ -301,29 +306,38 @@ def build_actions(spec, dec, tpl, domains):
     net = dec["network"]["id"]
     by_name = {d["sheet"]: d["id"] for d in dec["domains"]}
     alias = dict((dec.get("interaction_domains") or {}))
+    ids = [d["id"] for d in domains]
     def dom(name):
-        if name in alias:
-            return alias[name]
-        flat = re.sub(r"[^a-z]", "", name.lower()).rstrip("s")
-        # Longest id first, so "Service Provider" is service_provider and not provider.
-        hits = [d["id"] for d in domains if d["id"].replace("_", "") in flat or flat in d["id"].replace("_", "")]
-        return max(hits, key=len) if hits else name.lower().replace(" ", "_")
-    interactions = []
+        return domain_for(name, ids, alias) or name.lower().replace(" ", "_")
+    actions = {}
+    verbs = tpl.get("verb_statuses", {})
     for block in spec.get("interactions", []):
         frm, to = dom(block["from"]), dom(block["to"])
+        verb = (block["events"][0]["event"] if block.get("events") else "Connect").strip()
+        action, extra = verbs.get(verb.lower(), ["connect", None])
         it = copy.deepcopy(tpl["interaction_defaults"])
         it = {"from_network": net, "from_domain": frm, "to_network": net, "to_domain": to, **it}
         cards = {d["id"]: d["card"].get("default_fields", []) for d in domains}
         it = dict(list(it.items())[:4] + [("column_fields", {"from": cards.get(frm, []), "to": cards.get(to, [])})] + list(it.items())[4:])
-        title = f"{frm.replace('_', ' ').title()} To {to.replace('_', ' ').title()} Connect Event"
+        title = f"{frm.replace('_', ' ').title()} To {to.replace('_', ' ').title()} {verb.title()} Event"
         it["event_schema"]["title"] = title
-        interactions.append(it)
-    return {"connect": {"description": tpl["action_description"], "interactions": interactions}}
+        if extra:
+            it["event_schema"]["properties"]["status"]["enum"].insert(1, extra)
+            it["metric_categories"]["create"].append(extra)
+        # The non-seeker side exports its counterparties (deployed blue_dot).
+        requesters = [d for d in ids if d in (frm, to) and d not in tpl.get("export_excludes", [])]
+        if requesters:
+            it["export"] = {"requester_domains": requesters}
+        description = tpl["apply_description"] if action == "apply" else tpl["action_description"]
+        actions.setdefault(action, {"description": description, "interactions": []})["interactions"].append(it)
+    return actions or {"connect": {"description": tpl["action_description"], "interactions": []}}
 
 
 def build_network(spec, dec, tpl):
     profiles = {p["sheet"]: p for p in spec["profiles"]}
-    domains = [build_domain(profiles[d["sheet"]], d, tpl, dec["network"]["id"]) for d in dec["domains"]]
+    ids = [d["id"] for d in dec["domains"]]
+    pages = page_labels(spec, ids, dec.get("interaction_domains") or {})
+    domains = [build_domain(profiles[d["sheet"]], d, tpl, dec["network"]["id"], pages.get(d["id"])) for d in dec["domains"]]
     n = dec["network"]
     out = {"display_name": n["display_name"], "description": n.get("description", ""),
            "schema_standard": tpl["schema_standard"], "domains": domains}
@@ -363,13 +377,24 @@ def main():
     network = build_network(spec, dec, tpl)
     with open(os.path.join(out_dir, "network.json"), "w") as f:
         f.write(json.dumps(network, indent=2, ensure_ascii=False) + "\n")
+    alias = dec.get("interaction_domains") or {}
+    from_sheets = build_forms(spec, load_refs(REFS, load), [d["id"] for d in network["domains"]], alias)
     for name in FORM_FILES:
         full = (dec.get("forms_full") or {}).get(name)
-        form = copy.deepcopy(full) if full is not None else merge(
-            load(os.path.join(REFS, "aggregator", name)), (dec.get("forms") or {}).get(name) or {})
+        form = copy.deepcopy(full) if full is not None else merge(from_sheets[name], (dec.get("forms") or {}).get(name) or {})
         with open(os.path.join(out_dir, name), "w") as f:
             f.write(json.dumps(form, indent=2, ensure_ascii=False) + "\n")
-    print(json.dumps({"written": out_dir, "files": ["network.json"] + FORM_FILES,
+    with open(os.path.join(REFS, "aggregator", "aggregator.config.yaml")) as f:
+        config = aggregator_config(f.read(), network, spec, alias)
+    with open(os.path.join(out_dir, "aggregator.config.yaml"), "w") as f:
+        f.write(config)
+    files = ["network.json"] + FORM_FILES + ["aggregator.config.yaml"]
+    env = deployments_env(spec, network, alias)
+    if env:
+        with open(os.path.join(out_dir, "deployments.env"), "w") as f:
+            f.write(env)
+        files.append("deployments.env")
+    print(json.dumps({"written": out_dir, "files": files,
                       "domains": {d["id"]: len(next(iter(d["item_schemas"].values()))["properties"]) for d in network["domains"]}}, indent=2))
 
 

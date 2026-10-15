@@ -11,6 +11,8 @@ Turns a programme's schema workbook into the files a Blue Dots (Signals) deploym
 
 - `network.json`: domains, item schemas (fields), interactions
 - aggregator registration forms: `org-registration.v1.json` + `.ui.json` (organisation / owner) and `registration.v1.json` + `.ui.json` (coordinator)
+- `aggregator.config.yaml`: the portal's config for the network (identity fields and labels per domain)
+- `deployments.env` (when the workbook has a Domains sheet): per deployment, `SIGNALS_SERVED_DOMAINS`, `SIGNALS_UI_URLS` and `PUBLIC_PORTAL_URL` from the production links
 
 **The files are written by scripts, never by hand.** `build.py` combines the workbook (`.spec.json`), the human choices (`decisions.json`) and the reference templates in `references/` (structure taken from a deployed network), so the output always has the structure Signals and the aggregator portal read, and the same inputs always give the same files. Your job is to fill in `decisions.json`, not to write JSON schemas.
 
@@ -94,10 +96,12 @@ Integrators should get files, not a questionnaire. Don't ask questions; resolve 
 | PII = Yes | `private: true` (PII wins over Vectorise: never both) |
 | Vectorise = Yes | `vectorize: true` (not on numbers, locations or PII) |
 | Search / Filter Field | no marker: every declared non-private field is searchable and filterable |
-| Interaction rules | `actions.connect.interactions` with the reference event schema, statuses and `reveals_pii_on_status: ["accepted","completed"]` |
+| Interaction rules | one interaction per block, `reveals_pii_on_status: ["accepted","completed"]`. The block's first event picks the action: Connect → `connect`; Apply → `apply` with status `submitted`; Shortlist / Invite → `connect` with status `invited`. `export.requester_domains` = the non-seeker side of the pair |
+| Interaction_Rules "Page Name" table | `my_items_label` per domain (first table if there are several) |
 | Domain settings, status rules, dashboard, instances | `references/network.template.json` (or the existing network) |
-| Aggregator forms | `references/aggregator/` (the keys the portal's code reads); changes via `decisions.forms` |
+| Aggregator Owner / Coordinator sheets | the forms in `references/aggregator/` (the keys the portal's code reads), with Aggregator Type = the network's domains (sheet labels), Organisation Type / Sub-type / Management Type options from the sheet, and optional fields the sheet lacks (e.g. `state`) dropped; further changes via `decisions.forms` |
+| Domains + contact fields | `aggregator.config.yaml`: `field_overrides` = each domain's `contact_fields`, `domain_labels` from the Aggregator Type labels; `network.source` points at bluedots-schemas `<network id>/network.json`, so check it |
 
 ## Accuracy
 
-`tests/run_golden.py` rebuilds the Purple Dots (ALIMCO) schema from its Oct 2026 workbook and must match the deployed reference exactly (5/5 files), and builds the Blue Dots Aug 2026 workbook in create mode, which must match its expected files (titles, conditions, interactions). All outputs must pass `check_schema.py`. Run it after any change to the scripts.
+`tests/run_golden.py` rebuilds the Purple Dots (ALIMCO) schema from its Oct 2026 workbook and must match the deployed reference exactly (5/5 files), and builds the Blue Dots Aug 2026 workbook in create mode, which must match its expected files (titles, conditions, interactions, forms from the owner/coordinator sheets). `tests/test_forms_and_config.py` checks the forms and `aggregator.config.yaml` for that workbook; `tests/test_interactions_and_pages.py` checks page names, actions, export and `deployments.env` against the deployed UP-GZB network. All outputs must pass `check_schema.py`. Run it after any change to the scripts.

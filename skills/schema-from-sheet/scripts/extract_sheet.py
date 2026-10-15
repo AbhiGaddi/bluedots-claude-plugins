@@ -287,6 +287,24 @@ def interaction_blocks(ws):
     return out
 
 
+def page_names(ws):
+    """The "<instance> | Page Name" table below the interaction blocks: {instance, pages: {domain label: page name}}."""
+    out, current = [], None
+    for i, r in raw_rows(ws):
+        r = [clean(c) for c in r] + [""]
+        # The name is the first filled cell after the label (sheets merge B:C).
+        a, b = r[0], next((c for c in r[1:] if c), "")
+        if b.lower() == "page name":
+            current = {"instance": a, "pages": {}}
+            out.append(current)
+        elif out and a and not b and not re.search(r"-+>", a):
+            current = {"instance": a, "pages": {}}
+            out.append(current)
+        elif current is not None and a and b:
+            current["pages"][a] = b
+    return [p for p in out if p["pages"]]
+
+
 def interaction_table(ws, hrow, header):
     """Layout 2: flat "Event | Sender | Receiver | Comment" table, grouped per sender -> receiver."""
     h = [header_text(c) for c in header]
@@ -332,7 +350,7 @@ def main():
     out_path = args[args.index("-o") + 1] if "-o" in args else None
     wb = openpyxl.load_workbook(args[0], data_only=True)
     warnings = []
-    spec = {"workbook": args[0], "profiles": [], "forms": [], "interactions": [], "domains": [],
+    spec = {"workbook": args[0], "profiles": [], "forms": [], "interactions": [], "domains": [], "page_names": [],
             "skipped_sheets": [], "warnings": warnings}
     for ws in wb.worksheets:
         if ws.sheet_state != "visible":
@@ -349,6 +367,7 @@ def main():
             continue
         if find_header(ws, ["user interaction", "event"])[0]:
             spec["interactions"] += interaction_blocks(ws)
+            spec["page_names"] += page_names(ws)
             continue
         hrow, header = find_header(ws, ["event"])
         if hrow and any(t in [header_text(c) for c in header] for t in ("sender", "from", "receiver", "to")):

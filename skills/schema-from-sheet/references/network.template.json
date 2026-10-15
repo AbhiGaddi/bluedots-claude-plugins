@@ -173,5 +173,24 @@
     "instance_name": "{Network} {Domain} Local",
     "instance_url": "http://localhost:2742",
     "custom_item_schema_urls": {}
-  }
+  },
+  "apply_description": "Lets a seeker apply to a provider. The provider can shortlist or reject, and the seeker can cancel before the provider responds.",
+  "verb_statuses": {
+    "_comment": "First event of a sheet interaction block -> action and the extra status after 'created' (deployed blue_dot: Apply = apply/submitted, Shortlist = connect/invited).",
+    "apply": [
+      "apply",
+      "submitted"
+    ],
+    "shortlist": [
+      "connect",
+      "invited"
+    ],
+    "invite": [
+      "connect",
+      "invited"
+    ]
+  },
+  "export_excludes": [
+    "seeker"
+  ]
 }

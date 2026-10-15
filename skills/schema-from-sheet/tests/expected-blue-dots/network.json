@@ -529,7 +529,7 @@
         "schema_required",
         "consent_required"
       ],
-      "my_items_label": "My Actions",
+      "my_items_label": "My Jobs",
       "status_rules": [
         {
           "status": "new",
@@ -1092,7 +1092,7 @@
         "schema_required",
         "consent_required"
       ],
-      "my_items_label": "My Actions",
+      "my_items_label": "My Services",
       "status_rules": [
         {
           "status": "new",
@@ -1631,7 +1631,12 @@
           "reveals_pii_on_status": [
             "accepted",
             "completed"
-          ]
+          ],
+          "export": {
+            "requester_domains": [
+              "service_provider"
+            ]
+          }
         },
         {
           "from_network": "blue_dot",
@@ -1700,76 +1705,12 @@
           "reveals_pii_on_status": [
             "accepted",
             "completed"
-          ]
-        },
-        {
-          "from_network": "blue_dot",
-          "from_domain": "seeker",
-          "to_network": "blue_dot",
-          "to_domain": "provider",
-          "column_fields": {
-            "from": [
-              "workExperience",
-              "yearsWorkExperience",
-              "nameLastRoleHeld",
-              "highestQualificationSkill",
-              "qualificationDetails"
-            ],
-            "to": [
-              "companyName",
-              "jobNameRole",
-              "exactLocationJobPincode",
-              "numberOpenings",
-              "natureJob"
+          ],
+          "export": {
+            "requester_domains": [
+              "service_provider"
             ]
-          },
-          "requirement_schema": {
-            "type": "object",
-            "properties": {}
-          },
-          "event_schema": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "title": "Seeker To Provider Connect Event",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "status",
-              "remark"
-            ],
-            "properties": {
-              "status": {
-                "type": "string",
-                "enum": [
-                  "created",
-                  "accepted",
-                  "completed",
-                  "rejected",
-                  "cancelled"
-                ]
-              },
-              "remark": {
-                "type": "string"
-              }
-            }
-          },
-          "metric_categories": {
-            "create": [
-              "created"
-            ],
-            "accept": [
-              "accepted"
-            ],
-            "reject": [
-              "rejected"
-            ],
-            "cancel": [
-              "cancelled"
-            ]
-          },
-          "reveals_pii_on_status": [
-            "accepted",
-            "completed"
-          ]
+          }
         },
         {
           "from_network": "blue_dot",
@@ -1798,7 +1739,7 @@
           },
           "event_schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "title": "Provider To Seeker Connect Event",
+            "title": "Provider To Seeker Shortlist Event",
             "type": "object",
             "additionalProperties": false,
             "required": [
@@ -1810,6 +1751,7 @@
                 "type": "string",
                 "enum": [
                   "created",
+                  "invited",
                   "accepted",
                   "completed",
                   "rejected",
@@ -1823,7 +1765,8 @@
           },
           "metric_categories": {
             "create": [
-              "created"
+              "created",
+              "invited"
             ],
             "accept": [
               "accepted"
@@ -1838,7 +1781,12 @@
           "reveals_pii_on_status": [
             "accepted",
             "completed"
-          ]
+          ],
+          "export": {
+            "requester_domains": [
+              "provider"
+            ]
+          }
         },
         {
           "from_network": "blue_dot",
@@ -1907,7 +1855,13 @@
           "reveals_pii_on_status": [
             "accepted",
             "completed"
-          ]
+          ],
+          "export": {
+            "requester_domains": [
+              "provider",
+              "service_provider"
+            ]
+          }
         },
         {
           "from_network": "blue_dot",
@@ -1976,7 +1930,94 @@
           "reveals_pii_on_status": [
             "accepted",
             "completed"
-          ]
+          ],
+          "export": {
+            "requester_domains": [
+              "provider",
+              "service_provider"
+            ]
+          }
+        }
+      ]
+    },
+    "apply": {
+      "description": "Lets a seeker apply to a provider. The provider can shortlist or reject, and the seeker can cancel before the provider responds.",
+      "interactions": [
+        {
+          "from_network": "blue_dot",
+          "from_domain": "seeker",
+          "to_network": "blue_dot",
+          "to_domain": "provider",
+          "column_fields": {
+            "from": [
+              "workExperience",
+              "yearsWorkExperience",
+              "nameLastRoleHeld",
+              "highestQualificationSkill",
+              "qualificationDetails"
+            ],
+            "to": [
+              "companyName",
+              "jobNameRole",
+              "exactLocationJobPincode",
+              "numberOpenings",
+              "natureJob"
+            ]
+          },
+          "requirement_schema": {
+            "type": "object",
+            "properties": {}
+          },
+          "event_schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "Seeker To Provider Apply Event",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status",
+              "remark"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "created",
+                  "submitted",
+                  "accepted",
+                  "completed",
+                  "rejected",
+                  "cancelled"
+                ]
+              },
+              "remark": {
+                "type": "string"
+              }
+            }
+          },
+          "metric_categories": {
+            "create": [
+              "created",
+              "submitted"
+            ],
+            "accept": [
+              "accepted"
+            ],
+            "reject": [
+              "rejected"
+            ],
+            "cancel": [
+              "cancelled"
+            ]
+          },
+          "reveals_pii_on_status": [
+            "accepted",
+            "completed"
+          ],
+          "export": {
+            "requester_domains": [
+              "provider"
+            ]
+          }
         }
       ]
     }

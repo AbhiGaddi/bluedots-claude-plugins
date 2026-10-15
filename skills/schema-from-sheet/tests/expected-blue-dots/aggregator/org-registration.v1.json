@@ -9,6 +9,7 @@
     "display_name",
     "aggregator_type",
     "organisation_type",
+    "management_type",
     "owner",
     "consent"
   ],
@@ -44,7 +45,8 @@
         "type": "string",
         "enum": [
           "seeker",
-          "provider"
+          "provider",
+          "service_provider"
         ]
       },
       "examples": [
@@ -55,8 +57,7 @@
           "provider"
         ],
         [
-          "seeker",
-          "provider"
+          "service_provider"
         ]
       ]
     },
@@ -65,10 +66,57 @@
       "title": "Organisation Type",
       "description": "The broad category that describes your organisation.",
       "enum": [
-        "ngo",
-        "government_entity",
-        "private_company",
+        "educational",
+        "non_educational"
+      ]
+    },
+    "organisation_sub_type_educational": {
+      "type": "string",
+      "title": "Organisation Sub-Type",
+      "description": "Select the type that best applies.",
+      "x-show-if": {
+        "organisation_type": [
+          "educational"
+        ]
+      },
+      "enum": [
+        "school",
+        "pu_college",
+        "college",
+        "iti",
+        "other_vocational_training",
+        "polytechnic",
+        "diploma",
+        "other"
+      ]
+    },
+    "organisation_sub_type_non_educational": {
+      "type": "string",
+      "title": "Organisation Sub-Type",
+      "description": "Select the type that best applies.",
+      "x-show-if": {
+        "organisation_type": [
+          "non_educational"
+        ]
+      },
+      "enum": [
+        "employment_exchange",
+        "placement_agency",
         "community_group",
+        "individual_trainer_counsellor",
+        "msme_association",
+        "industries_and_commerce_department",
+        "other"
+      ]
+    },
+    "management_type": {
+      "type": "string",
+      "title": "Management Type",
+      "description": "Whether the organisation is privately run, government-operated, or an NGO.",
+      "enum": [
+        "private",
+        "government",
+        "ngo",
         "other"
       ]
     },
@@ -109,12 +157,6 @@
           "maxLength": 100
         }
       }
-    },
-    "state": {
-      "type": "string",
-      "title": "State",
-      "description": "Derived from the address block on this instance; not asked for separately.",
-      "maxLength": 200
     },
     "owner": {
       "type": "object",

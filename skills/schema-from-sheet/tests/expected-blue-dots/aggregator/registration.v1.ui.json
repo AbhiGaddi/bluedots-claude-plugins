@@ -76,6 +76,7 @@
     "ui:placeholder": "Select aggregator type",
     "ui:enumNames": [
       "Seeker",
+      "Job Provider",
       "Service Provider"
     ]
   },

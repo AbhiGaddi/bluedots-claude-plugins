@@ -5,20 +5,16 @@
     "website",
     "aggregator_type",
     "organisation_type",
+    "organisation_sub_type_educational",
+    "organisation_sub_type_non_educational",
+    "management_type",
     "address",
-    "state",
     "owner",
     "consent"
   ],
   "display_name": {
     "ui:placeholder": "e.g. ABC Limited",
     "ui:autofocus": true
-  },
-  "state": {
-    "ui:widget": "hidden",
-    "ui:options": {
-      "label": false
-    }
   },
   "owner": {
     "ui:layout": "grid",
@@ -76,6 +72,7 @@
     "ui:widget": "checkboxes",
     "ui:enumNames": [
       "Seekers",
+      "Job Providers",
       "Service Providers"
     ],
     "ui:options": {
@@ -115,11 +112,45 @@
     "ui:widget": "select",
     "ui:placeholder": "Select organisation type",
     "ui:enumNames": [
-      "NGO",
-      "Government Entity",
-      "Private Company",
+      "Educational",
+      "Non-Educational"
+    ]
+  },
+  "organisation_sub_type_educational": {
+    "ui:widget": "select",
+    "ui:placeholder": "Select sub-type",
+    "ui:enumNames": [
+      "School",
+      "PU College",
+      "College",
+      "ITI",
+      "Other Vocational Training",
+      "Polytechnic",
+      "Diploma",
+      "Other"
+    ]
+  },
+  "organisation_sub_type_non_educational": {
+    "ui:widget": "select",
+    "ui:placeholder": "Select sub-type",
+    "ui:enumNames": [
+      "Employment Exchange",
+      "Placement Agency",
       "Community Group",
-      "Others"
+      "Individual Trainer / Counsellor",
+      "MSME Association",
+      "Industries and Commerce Department",
+      "Other"
+    ]
+  },
+  "management_type": {
+    "ui:widget": "select",
+    "ui:placeholder": "Select management type",
+    "ui:enumNames": [
+      "Private",
+      "Government",
+      "NGO",
+      "Other"
     ]
   }
 }

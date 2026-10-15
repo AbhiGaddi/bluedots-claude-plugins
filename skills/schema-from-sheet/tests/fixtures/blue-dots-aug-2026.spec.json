@@ -2777,7 +2777,76 @@
       ]
     }
   ],
-  "domains": [],
+  "domains": [
+    {
+      "instance": "Karnataka - Dharwad",
+      "links": [
+        {
+          "role": "Seeker",
+          "production": "https://dharwad-seekers.bluedotseconomy.org/",
+          "uat": "https://seekers.bluedotseconomy.org\nhttps://providers.bluedotseconomy.org\nhttps://services.bluedotseconomy.org\nhttps://aggregators.bluedotseconomy.org"
+        },
+        {
+          "role": "Job Providers",
+          "production": "https://dharwad-providers.bluedotseconomy.org/",
+          "uat": ""
+        },
+        {
+          "role": "Service Providers",
+          "production": "https://dharwad-services.bluedotseconomy.org/",
+          "uat": ""
+        },
+        {
+          "role": "Aggregators",
+          "production": "https://dharwad-aggregators.bluedotseconomy.org",
+          "uat": ""
+        }
+      ]
+    },
+    {
+      "instance": "UP - Ghaziabad",
+      "links": [
+        {
+          "role": "Seeker",
+          "production": "https://gzb-seekers.bluedotseconomy.org/",
+          "uat": ""
+        },
+        {
+          "role": "Job Providers",
+          "production": "https://gzb-providers.bluedotseconomy.org/",
+          "uat": ""
+        },
+        {
+          "role": "Service Providers",
+          "production": "https://gzb-services.bluedotseconomy.org/",
+          "uat": ""
+        },
+        {
+          "role": "Aggregators",
+          "production": "https://gzb-aggregators.bluedotseconomy.org",
+          "uat": ""
+        }
+      ]
+    }
+  ],
+  "page_names": [
+    {
+      "instance": "Karnataka - Dharwad",
+      "pages": {
+        "Seeker": "My Actions",
+        "Job Providers": "My Jobs",
+        "Service Providers": "My Services"
+      }
+    },
+    {
+      "instance": "UP - Ghaziabad",
+      "pages": {
+        "Seeker": "My Actions",
+        "Job Providers": "My Jobs",
+        "Service Providers": "My Services"
+      }
+    }
+  ],
   "skipped_sheets": [
     "Sheet11 (hidden)",
     "Sample_Seeker_Data (hidden)",
